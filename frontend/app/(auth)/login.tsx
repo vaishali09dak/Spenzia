@@ -1,6 +1,7 @@
 // app/(auth)/login.tsx
 import React, { useState } from 'react';
 import { View, Text, TextInput, Button, StyleSheet, Alert } from 'react-native';
+import { router } from "expo-router";
 
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../../firebase';  // Adjust path as needed
@@ -46,7 +47,15 @@ export default function LoginScreen() {
         onPress={handleLogin} 
         disabled={loading} 
       />
-      
+      <View style={{ marginTop: 20, flexDirection: "row", justifyContent: "center" }}>
+  <Text>Don&apos;t have an account? </Text>
+  <Text
+    style={{ color: "blue", fontWeight: "bold" }}
+    onPress={() => router.push("/signup")}
+  >
+    Sign Up
+  </Text>
+</View>
     </View>
   );
 }

@@ -4,7 +4,7 @@ import { View, Text, TextInput, Button, StyleSheet, Alert } from 'react-native';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth } from  '../../firebase';  // Adjust path as needed
 
-
+import GoogleSignIn from "../../components/GoogleSignIn";
 export default function SignUpScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -47,7 +47,13 @@ export default function SignUpScreen() {
         disabled={loading} 
       />
       
+      <Button title={loading ? "Loading..." : "Sign Up"} onPress={handleSignUp} disabled={loading} />
       
+            {/* separator */}
+            <Text style={styles.orText}>— or sign up with —</Text>
+      
+            {/* Google sign-in button (component) */}
+            <GoogleSignIn />
     </View>
   );
 }
@@ -57,4 +63,5 @@ const styles = StyleSheet.create({
   container: { flex: 1, justifyContent: 'center', padding: 20 },
   title: { fontSize: 24, marginBottom: 20, textAlign: 'center' },
   input: { borderWidth: 1, padding: 10, marginVertical: 8, borderRadius: 5 },
+  orText: { textAlign: "center", marginVertical: 12, color: "#a6a5bcff" },
 });

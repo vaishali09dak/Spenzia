@@ -67,7 +67,7 @@ export default function LoginScreen() {
       <Text style={styles.orText}>— or sign in with —</Text>
 
       {/* Google sign-in button (component) */}
-      <GoogleSignIn />
+      <GoogleSignIn/>
     </View>
   );
 }

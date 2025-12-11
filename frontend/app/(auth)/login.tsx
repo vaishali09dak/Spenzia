@@ -2,6 +2,7 @@
 import React, { useState } from "react";
 import { View, Text, TextInput, Button, StyleSheet, Alert } from "react-native";
 
+
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../../firebase"; // Adjust path if your firebase.ts is elsewhere
 
@@ -47,6 +48,8 @@ export default function LoginScreen() {
         onChangeText={setPassword}
         secureTextEntry
       />
+      
+
       <Button title={loading ? "Loading..." : "Log In"} onPress={handleLogin} disabled={loading} />
 
       {/* separator */}

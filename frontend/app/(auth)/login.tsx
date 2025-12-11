@@ -2,6 +2,7 @@
 import React, { useState } from "react";
 import { View, Text, TextInput, Button, StyleSheet, Alert } from "react-native";
 
+import { router } from "expo-router";
 
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../../firebase"; // Adjust path if your firebase.ts is elsewhere
@@ -48,6 +49,16 @@ export default function LoginScreen() {
         onChangeText={setPassword}
         secureTextEntry
       />
+
+       <View style={{ flexDirection: "row", justifyContent: "center", marginTop: 20 }}>
+      <Text>Don&apos;t have an account? </Text>
+      <Text
+        style={{ color: "blue", fontWeight: "bold" }}
+        onPress={() => router.push("/signup")}
+      >
+        Sign Up
+      </Text>
+    </View>
       
 
       <Button title={loading ? "Loading..." : "Log In"} onPress={handleLogin} disabled={loading} />

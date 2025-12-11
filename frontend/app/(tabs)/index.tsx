@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { Button, Platform, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
 
-import { db } from '../../firebase';  
+import { db } from '../../firebase.js';  
 import { ref, set, push, onValue } from 'firebase/database';
 
 import { HelloWave } from '@/components/hello-wave';

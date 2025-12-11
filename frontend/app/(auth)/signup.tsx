@@ -4,6 +4,7 @@ import { View, Text, TextInput, Button, StyleSheet, Alert } from 'react-native';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth } from  '../../firebase';  // Adjust path as needed
 
+
 export default function SignUpScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -45,6 +46,7 @@ export default function SignUpScreen() {
         onPress={handleSignUp} 
         disabled={loading} 
       />
+      
       
     </View>
   );

@@ -1,6 +1,7 @@
 // app/(auth)/login.tsx
-import React, { useState } from "react";
-import { View, Text, TextInput, Button, StyleSheet, Alert } from "react-native";
+import React, { useState } from 'react';
+import { View, Text, TextInput, Button, StyleSheet, Alert } from 'react-native';
+import { router } from "expo-router";
 
 
 import { signInWithEmailAndPassword } from "firebase/auth";
@@ -48,15 +49,20 @@ export default function LoginScreen() {
         onChangeText={setPassword}
         secureTextEntry
       />
-      
-
-      <Button title={loading ? "Loading..." : "Log In"} onPress={handleLogin} disabled={loading} />
-
-      {/* separator */}
-      <Text style={styles.orText}>— or sign in with —</Text>
-
-      {/* Google sign-in button (component) */}
-      <GoogleSignIn />
+      <Button 
+        title={loading ? "Loading..." : "Log In"} 
+        onPress={handleLogin} 
+        disabled={loading} 
+      />
+      <View style={{ marginTop: 20, flexDirection: "row", justifyContent: "center" }}>
+  <Text>Don&apos;t have an account? </Text>
+  <Text
+    style={{ color: "blue", fontWeight: "bold" }}
+    onPress={() => router.push("/signup")}
+  >
+    Sign Up
+  </Text>
+</View>
     </View>
   );
 }

@@ -1,15 +1,19 @@
 // app/(auth)/login.tsx
 import React, { useState } from 'react';
 import { View, Text, TextInput, Button, StyleSheet, Alert } from 'react-native';
+
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { auth } from "../../firebase"; // Adjust path if your firebase.ts is elsewhere
 import { router } from "expo-router";
 
-import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../../firebase';  // Adjust path as needed
+// <-- new import: Google sign-in component
+import GoogleSignIn from "../../components/GoogleSignIn";
 
 export default function LoginScreen() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+
 
   const handleLogin = async () => {
     setLoading(true);
@@ -27,9 +31,11 @@ export default function LoginScreen() {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Sign In</Text>
+
       <TextInput
         style={styles.input}
         placeholder="Email"
+        placeholderTextColor="#999"
         value={email}
         onChangeText={setEmail}
         keyboardType="email-address"
@@ -38,6 +44,7 @@ export default function LoginScreen() {
       <TextInput
         style={styles.input}
         placeholder="Password"
+        placeholderTextColor="#999"
         value={password}
         onChangeText={setPassword}
         secureTextEntry
@@ -47,22 +54,30 @@ export default function LoginScreen() {
         onPress={handleLogin} 
         disabled={loading} 
       />
-      <View style={{ marginTop: 20, flexDirection: "row", justifyContent: "center" }}>
-  <Text>Don&apos;t have an account? </Text>
-  <Text
-    style={{ color: "blue", fontWeight: "bold" }}
-    onPress={() => router.push("/signup")}
-  >
-    Sign Up
-  </Text>
-</View>
+
+      <View style={{ flexDirection: "row", justifyContent: "center", marginTop: 20 }}>
+      <Text>Don&apos;t have an account? </Text>
+      <Text
+        style={{ color: "blue", fontWeight: "bold" }}
+        onPress={() => router.push("/signup")}
+      >
+        Sign In
+      </Text>
+    </View>
+
+      {/* separator */}
+<Text style={styles.orText}>— or sign in with —</Text>
+
+{/* Google sign-in button (component) */}
+<GoogleSignIn />
+
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  // ... basic styles for container, title, input, etc.
-  container: { flex: 1, justifyContent: 'center', padding: 20 },
-  title: { fontSize: 24, marginBottom: 20, textAlign: 'center' },
+  container: { flex: 1, justifyContent: "center", padding: 20 },
+  title: { fontSize: 24, marginBottom: 20, textAlign: "center" },
   input: { borderWidth: 1, padding: 10, marginVertical: 8, borderRadius: 5 },
+  orText: { textAlign: "center", marginVertical: 12, color: "#a6a5bcff" },
 });

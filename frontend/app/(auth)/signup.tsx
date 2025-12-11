@@ -3,6 +3,9 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, Button, StyleSheet, Alert } from 'react-native';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth } from  '../../firebase';  // Adjust path as needed
+import { router } from "expo-router";
+
+import GoogleSignIn from "../../components/GoogleSignIn";
 
 export default function SignUpScreen() {
   const [email, setEmail] = useState('');
@@ -45,6 +48,22 @@ export default function SignUpScreen() {
         onPress={handleSignUp} 
         disabled={loading} 
       />
+
+      <View style={{ flexDirection: "row", justifyContent: "center", marginTop: 20 }}>
+      <Text>Don&apos;t have an account? </Text>
+      <Text
+        style={{ color: "blue", fontWeight: "bold" }}
+        onPress={() => router.push("/signup")}
+      >
+        Sign Up
+      </Text>
+    </View>
+
+      {/* separator */}
+      <Text style={styles.orText}>— or sign up with —</Text>
+      
+      {/* Google sign-in button (component) */}
+      <GoogleSignIn />
       
     </View>
   );
@@ -55,4 +74,5 @@ const styles = StyleSheet.create({
   container: { flex: 1, justifyContent: 'center', padding: 20 },
   title: { fontSize: 24, marginBottom: 20, textAlign: 'center' },
   input: { borderWidth: 1, padding: 10, marginVertical: 8, borderRadius: 5 },
+  orText: { textAlign: "center", marginVertical: 12, color: "#a6a5bcff" },
 });

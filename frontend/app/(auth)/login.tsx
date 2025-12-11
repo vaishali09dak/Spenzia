@@ -1,6 +1,6 @@
 // app/(auth)/login.tsx
-import React, { useState } from 'react';
-import { View, Text, TextInput, Button, StyleSheet, Alert } from 'react-native';
+import React, { useState } from "react";
+import { View, Text, TextInput, Button, StyleSheet, Alert } from "react-native";
 
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../../firebase"; // Adjust path if your firebase.ts is elsewhere
@@ -47,19 +47,20 @@ export default function LoginScreen() {
         onChangeText={setPassword}
         secureTextEntry
       />
-      <Button 
-        title={loading ? "Loading..." : "Log In"} 
-        onPress={handleLogin} 
-        disabled={loading} 
-      />
-      
+      <Button title={loading ? "Loading..." : "Log In"} onPress={handleLogin} disabled={loading} />
+
+      {/* separator */}
+      <Text style={styles.orText}>— or sign in with —</Text>
+
+      {/* Google sign-in button (component) */}
+      <GoogleSignIn />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  // ... basic styles for container, title, input, etc.
-  container: { flex: 1, justifyContent: 'center', padding: 20 },
-  title: { fontSize: 24, marginBottom: 20, textAlign: 'center' },
+  container: { flex: 1, justifyContent: "center", padding: 20 },
+  title: { fontSize: 24, marginBottom: 20, textAlign: "center" },
   input: { borderWidth: 1, padding: 10, marginVertical: 8, borderRadius: 5 },
+  orText: { textAlign: "center", marginVertical: 12, color: "#a6a5bcff" },
 });

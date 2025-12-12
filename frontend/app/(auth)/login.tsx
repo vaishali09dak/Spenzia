@@ -1,11 +1,10 @@
 // app/(auth)/login.tsx
 import React, { useState } from 'react';
 import { View, Text, TextInput, Button, StyleSheet, Alert } from 'react-native';
-import { router } from "expo-router";
-
 
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../../firebase"; // Adjust path if your firebase.ts is elsewhere
+import { router } from "expo-router";
 
 // <-- new import: Google sign-in component
 import GoogleSignIn from "../../components/GoogleSignIn";
@@ -14,6 +13,7 @@ export default function LoginScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+
 
   const handleLogin = async () => {
     setLoading(true);
@@ -54,15 +54,23 @@ export default function LoginScreen() {
         onPress={handleLogin} 
         disabled={loading} 
       />
-      <View style={{ marginTop: 20, flexDirection: "row", justifyContent: "center" }}>
-  <Text>Don&apos;t have an account? </Text>
-  <Text
-    style={{ color: "blue", fontWeight: "bold" }}
-    onPress={() => router.push("/signup")}
-  >
-    Sign Up
-  </Text>
-</View>
+
+      <View style={{ flexDirection: "row", justifyContent: "center", marginTop: 20 }}>
+      <Text>Don&apos;t have an account? </Text>
+      <Text
+        style={{ color: "blue", fontWeight: "bold" }}
+        onPress={() => router.push("/signup")}
+      >
+        Sign In
+      </Text>
+    </View>
+
+      {/* separator */}
+<Text style={styles.orText}>— or sign in with —</Text>
+
+{/* Google sign-in button (component) */}
+<GoogleSignIn />
+
     </View>
   );
 }

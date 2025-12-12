@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "512927432128",
+    "firebase_url": "https://spenzia-29ccf-default-rtdb.firebaseio.com",
+    "project_id": "spenzia-29ccf",
+    "storage_bucket": "spenzia-29ccf.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:512927432128:android:af5c495e8ba32d1d51dc25",
+        "android_client_info": {
+          "package_name": "com.spenzia.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "512927432128-uf79jes9kvd213sq8tood3paauil4j5e.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDFyWifZbh7__GHivsli1fPpjOwq1CcFTA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "512927432128-9pk7v8jlv362rscp4e0qq752llj2sqaf.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

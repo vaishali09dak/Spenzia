@@ -50,12 +50,12 @@ export default function SignUpScreen() {
       />
 
       <View style={{ flexDirection: "row", justifyContent: "center", marginTop: 20 }}>
-      <Text>Don&apos;t have an account? </Text>
+      <Text>Already have an account?</Text>
       <Text
         style={{ color: "blue", fontWeight: "bold" }}
         onPress={() => router.push("/signup")}
       >
-        Sign Up
+        Log In
       </Text>
     </View>
 

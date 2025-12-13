@@ -12,16 +12,22 @@ export default function RootLayout() {
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <Stack screenOptions={{ headerShown: false }}>
         
-        {/* 1. Login Screen (The actual file is login.tsx) */}
+        {/* 1. Welcome/Onboarding Screen */}
         <Stack.Screen 
-          name="login" 
-          options={{ title: 'Welcome Back', headerShown: false }} 
+          name="welcome" 
+          options={{ title: 'Welcome', headerShown: false }} 
         />
         
-        {/* 2. Signup Screen (The actual file is signup.tsx) */}
+        {/* 2. Signup Screen */}
         <Stack.Screen 
           name="signup" 
           options={{ title: 'Create Account', headerShown: false }} 
+        />
+        
+        {/* 3. Login Screen */}
+        <Stack.Screen 
+          name="login" 
+          options={{ title: 'Welcome Back', headerShown: false }} 
         />
        
       </Stack>

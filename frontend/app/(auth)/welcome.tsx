@@ -1,15 +1,21 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Dimensions, ScrollView } from 'react-native';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const { width, height } = Dimensions.get('window');
 
 export default function WelcomeScreen() {
   return (
-    <View style={styles.container}>
-      <StatusBar style="dark" />
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <ScrollView 
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <StatusBar style="dark" />
       
       {/* Header Text */}
       <View style={styles.headerContainer}>
@@ -47,22 +53,28 @@ export default function WelcomeScreen() {
       >
         <Text style={styles.buttonText}>Start Your Journey</Text>
       </TouchableOpacity>
-    </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
-    backgroundColor: '#FDFDF6', // Light pale yellow/cream background
+    backgroundColor: '#FFF9F2', // Warm cream background
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
     paddingHorizontal: 24,
-    paddingTop: 60,
-    paddingBottom: 40,
+    paddingTop: 25,
+    paddingBottom: 25,
     alignItems: 'center',
   },
   headerContainer: {
     alignItems: 'center',
-    marginTop: 20,
+    marginTop: 10,
     marginBottom: 30,
   },
   welcomeText: {
@@ -79,9 +91,11 @@ const styles = StyleSheet.create({
   illustrationContainer: {
     width: width * 0.85,
     height: height * 0.35,
-    marginVertical: 20,
+    marginTop: 10,
+    marginBottom: 20,
     alignItems: 'center',
     justifyContent: 'center',
+    minHeight: 200,
   },
   illustration: {
     width: '100%',
@@ -104,7 +118,8 @@ const styles = StyleSheet.create({
     color: '#666',
     textAlign: 'center',
     marginHorizontal: 20,
-    marginTop: 10,
+    marginTop: 20,
+    marginBottom: 30,
     lineHeight: 24,
   },
   dotsContainer: {
@@ -134,7 +149,8 @@ const styles = StyleSheet.create({
     maxWidth: 320,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 20,
+    marginTop: 5,
+    marginBottom: 5,
     shadowColor: '#1E3A5F',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,

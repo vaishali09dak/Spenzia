@@ -7,6 +7,7 @@ import { auth } from '../../firebase';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const { width, height } = Dimensions.get('window');
 
@@ -28,11 +29,12 @@ export default function LoginScreen() {
   };
 
   return (
-    <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.scrollContent}>
-      <StatusBar style="dark" />
-      
-      {/* Illustration at top */}
-      <View style={styles.illustrationContainer}>
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.scrollContent}>
+        <StatusBar style="dark" />
+        
+        {/* Illustration at top */}
+        <View style={styles.illustrationContainer}>
         <Image
           source={require('../../assets/images/login-illustration.jpg')}
           style={styles.illustration}
@@ -96,24 +98,30 @@ export default function LoginScreen() {
           </TouchableOpacity>
         </View>
       </View>
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  scrollContainer: {
+  safeArea: {
     flex: 1,
     backgroundColor: '#F5F5F0', // Light beige/cream background
+  },
+  scrollContainer: {
+    flex: 1,
   },
   scrollContent: {
     flexGrow: 1,
   },
   illustrationContainer: {
-    width: width,
+    width: '100%',
     height: height * 0.3,
-    alignItems: 'center',
+    alignItems: 'stretch',
     justifyContent: 'flex-end',
+    paddingTop: 0,
     paddingBottom: 20,
+    paddingHorizontal: 0,
     backgroundColor: '#F5F5F0',
   },
   illustration: {

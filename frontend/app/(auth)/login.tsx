@@ -20,6 +20,7 @@ export default function LoginScreen() {
     setLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email, password);
+       router.replace("/(tabs)");
       // Firebase listener in useAuth will automatically update and redirect the user
     } catch (error: any) {
       Alert.alert('Login Failed', error.message);

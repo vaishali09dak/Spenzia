@@ -26,6 +26,7 @@ export default function SignUpScreen() {
     setLoading(true);
     try {
       await createUserWithEmailAndPassword(auth, email, password);
+       router.replace("/(tabs)");
       // Firebase listener in useAuth will automatically update and redirect the user
     } catch (error: any) {
       Alert.alert("Sign Up Failed", error.message);

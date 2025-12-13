@@ -54,7 +54,7 @@ export default function WelcomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FDF9E6', // Warm cream/beige background
+    backgroundColor: '#FDFDF6', // Light pale yellow/cream background
     paddingHorizontal: 24,
     paddingTop: 60,
     paddingBottom: 40,

@@ -15,7 +15,6 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { auth, db1 } from "../../firebase";
-import { db } from "../../firebase";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { router } from "expo-router";
 

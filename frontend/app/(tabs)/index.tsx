@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { PieChart } from "react-native-chart-kit";
+import { router } from "expo-router";
 
 const { height, width } = Dimensions.get("window");
 
@@ -75,7 +76,9 @@ export default function HomeScreen() {
       <View style={styles.topSection}>
         <View style={styles.header}>
           <Ionicons name="grid-outline" size={24} color="#fff" />
-          <Ionicons name="person-circle-outline" size={32} color="#fff" />
+          <TouchableOpacity onPress={() => router.push("/(auth)/dashboard")}>
+            <Ionicons name="person-circle-outline" size={32} color="#fff" />
+          </TouchableOpacity>
         </View>
 
         <View style={{ marginTop: 30 }}>

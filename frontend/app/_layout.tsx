@@ -5,9 +5,9 @@ import 'react-native-reanimated';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
-export const unstable_settings = {
-  anchor: '(auth)',
-};
+// export const unstable_settings = {
+//   anchor: '(auth)',
+// };
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();

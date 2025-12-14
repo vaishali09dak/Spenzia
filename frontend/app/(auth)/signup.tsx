@@ -27,6 +27,8 @@ export default function SignUpScreen() {
     try {
       await createUserWithEmailAndPassword(auth, email, password);
       router.replace("/(auth)/userdetails");
+
+
     } catch (error: any) {
       Alert.alert("Sign Up Failed", error.message);
     } finally {
@@ -36,46 +38,93 @@ export default function SignUpScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Create Your Account</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Email"
-        value={email}
-        onChangeText={setEmail}
-        keyboardType="email-address"
-        autoCapitalize="none"
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Password"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-      />
-      <Button 
-        title={loading ? "Loading..." : "Sign Up"} 
-        onPress={handleSignUp} 
-        disabled={loading} 
-      />
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.scrollContent}>
+        <StatusBar style="dark" />
+        
+        {/* Illustration at top */}
+        <View style={styles.illustrationContainer}>
+        <Image
+          source={require('../../assets/images/signup-illustration.jpg')}
+          style={styles.illustration}
+          contentFit="contain"
+          transition={200}
+        />
+      </View>
 
-      <View style={{ flexDirection: "row", justifyContent: "center", marginTop: 20 }}>
-      <Text>Don&apos;t have an account? </Text>
-      <Text
-        style={{ color: "blue", fontWeight: "bold" }}
-        onPress={() => router.push("/signup")}
-      >
-        Sign Up
-      </Text>
-    </View>
+      {/* White Card */}
+      <View style={styles.card}>
+        <Text style={styles.title}>Sign Up</Text>
 
-      {/* separator */}
-      <Text style={styles.orText}>— or sign up with —</Text>
-      
-      {/* Google sign-in button (component) */}
-      <GoogleSignIn />
-      
-    </View>
+        {/* Email Input */}
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>Email</Text>
+          <View style={styles.inputWrapper}>
+            <Ionicons name="mail-outline" size={20} color="#999" style={styles.inputIcon} />
+            <TextInput
+              style={styles.input}
+              placeholder="Enter your email"
+              placeholderTextColor="#999"
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+          </View>
+        </View>
+
+        {/* Password Input */}
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>Password</Text>
+          <View style={styles.inputWrapper}>
+            <Ionicons name="lock-closed-outline" size={20} color="#999" style={styles.inputIcon} />
+            <TextInput
+              style={styles.input}
+              placeholder="Enter your password"
+              placeholderTextColor="#999"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+            />
+          </View>
+        </View>
+
+        {/* Confirm Password Input */}
+         <View style={styles.inputContainer}>
+          <Text style={styles.label}>Confirm Password</Text>
+          <View style={styles.inputWrapper}>
+            <Ionicons name="lock-closed-outline" size={20} color="#999" style={styles.inputIcon} />
+            <TextInput
+              style={styles.input}
+              placeholder="Confirm your password"
+              placeholderTextColor="#999"
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+              secureTextEntry
+            />
+          </View>
+        </View>
+
+        {/* Next Button */}
+        <TouchableOpacity
+          style={[styles.button, loading && styles.buttonDisabled]}
+          onPress={handleSignUp}
+          disabled={loading}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.buttonText}>{loading ? "Loading..." : "Sign Up"}</Text>
+        </TouchableOpacity>
+
+        {/* Sign In Link */}
+        <View style={styles.signInContainer}>
+          <Text style={styles.signInText}>Already have an account? </Text>
+          <TouchableOpacity onPress={() => router.push('/(auth)/login')}>
+            <Text style={styles.signInLink}>Log In</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 

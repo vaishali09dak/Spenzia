@@ -1,13 +1,14 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Dimensions, ScrollView, useWindowDimensions } from 'react-native';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-const { width, height } = Dimensions.get('window');
-
 export default function WelcomeScreen() {
+  const { width, height } = useWindowDimensions();
+  const styles = createStyles(width, height);
+  
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <ScrollView 
@@ -58,7 +59,7 @@ export default function WelcomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (width: number, height: number) => StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: '#FFF9F2', // Warm cream background

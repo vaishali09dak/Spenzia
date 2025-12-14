@@ -26,7 +26,7 @@ export default function SignUpScreen() {
     setLoading(true);
     try {
       await createUserWithEmailAndPassword(auth, email, password);
-      router.replace("/userdetails");
+      router.replace("/(auth)/userdetails");
     } catch (error: any) {
       Alert.alert("Sign Up Failed", error.message);
     } finally {

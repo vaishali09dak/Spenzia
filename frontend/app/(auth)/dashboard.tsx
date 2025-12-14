@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from "react";
+import { useRouter } from 'expo-router';
+
 import {
   View,
   Text,
@@ -56,12 +58,15 @@ export default function DashboardScreen() {
         {/* 🔵 PROFILE HEADER SECTION */}
         <View style={styles.profileHeader}>
           <View style={styles.headerTop}>
+
             <TouchableOpacity onPress={() => router.back()}>
               <Ionicons name="arrow-back" size={24} color="#fff" />
             </TouchableOpacity>
-            <TouchableOpacity>
+
+            {/* <TouchableOpacity onPress={() => router.push("/profile")}>
               <Ionicons name="settings-outline" size={24} color="#fff" />
-            </TouchableOpacity>
+            </TouchableOpacity> */}
+
           </View>
 
           <View style={styles.profileInfo}>
@@ -71,7 +76,9 @@ export default function DashboardScreen() {
             <Text style={styles.userName}>
               {userData?.fullName || "User Name"}
             </Text>
-            <Text style={styles.userRole}>Expense Tracker</Text>
+            <TouchableOpacity onPress={() => router.push("/profile")}>
+            <Text style={styles.userRole}>Edit</Text>
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -81,9 +88,6 @@ export default function DashboardScreen() {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>My Details</Text>
-              <TouchableOpacity>
-                <Ionicons name="calendar-outline" size={24} color="#5B8DEF" />
-              </TouchableOpacity>
             </View>
 
             <View style={styles.detailsCard}>
@@ -140,7 +144,9 @@ export default function DashboardScreen() {
           {/* FINANCIAL SUMMARY SECTION */}
           {userData?.monthlyIncome && (
             <View style={styles.section}>
+              <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Financial Summary</Text>
+              </View>
               <View style={styles.financialCard}>
                 <View style={styles.financialItem}>
                   <Text style={styles.financialLabel}>Monthly Income</Text>
@@ -231,13 +237,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 16,
+    marginTop: 8, 
+    marginBottom: 8
   },
 
   sectionTitle: {
     fontSize: 20,
     fontWeight: "700",
     color: "#1E3A5F",
+    marginTop: 12
   },
 
   detailsCard: {
@@ -249,6 +257,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
+    marginBottom: -15
   },
 
   detailItem: {

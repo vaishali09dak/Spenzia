@@ -16,12 +16,21 @@ export default function TabsLayout() {
         }}
       />
 
-      <Tabs.Screen
+      {/* <Tabs.Screen
         name="explore"
         options={{
           title: "Explore",
           tabBarIcon: ({ color }) => (
             <Ionicons name="paper-plane" size={28} color={color} />
+          ),
+        }} */}
+        
+      <Tabs.Screen
+        name="settings"
+        options={{
+          title: "Settings",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="settings-outline" size={size} color={color} />
           ),
         }}
       />

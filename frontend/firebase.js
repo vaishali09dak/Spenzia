@@ -1,4 +1,4 @@
-import { initializeApp } from "firebase/app";
+import { initializeApp, getApps, getApp } from "firebase/app";
 import { getDatabase } from "firebase/database";
 import { getAuth } from "firebase/auth";
 
@@ -13,6 +13,7 @@ const firebaseConfig = {
   databaseURL: "https://spenzia-29ccf-default-rtdb.firebaseio.com/"
 };
 
-export const app = initializeApp(firebaseConfig);
+// Guard against duplicate initialization (fast refresh / multiple imports)
+export const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 export const db = getDatabase(app);
-export const auth=  getAuth(app);
+export const auth = getAuth(app);

@@ -1,28 +1,38 @@
 // app/(auth)/signup.tsx
 import React, { useState } from 'react';
-import { View, Text, TextInput, Button, StyleSheet, Alert } from 'react-native';
+import { View, Text, TextInput, StyleSheet, Alert, TouchableOpacity, Dimensions, ScrollView } from 'react-native';
+import { Image } from 'expo-image';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { auth } from  '../../firebase';  // Adjust path as needed
-import { router } from "expo-router";
+import { auth } from '../../firebase';
+import { router } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { StatusBar } from 'expo-status-bar';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-import GoogleSignIn from "../../components/GoogleSignIn";
+const { width, height } = Dimensions.get('window');
 
 export default function SignUpScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword,setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleSignUp = async () => {
+    if(password !== confirmPassword){
+      Alert.alert("Error", "Passwords do not match");
+      return;
+    }
+    
     setLoading(true);
     try {
-      // Firebase function to create a new user
       await createUserWithEmailAndPassword(auth, email, password);
-      // Firebase listener in useAuth will automatically update and redirect the user
+      router.replace("/(auth)/userdetails");
     } catch (error: any) {
       Alert.alert("Sign Up Failed", error.message);
     } finally {
       setLoading(false);
     }
+
   };
 
   return (
@@ -50,12 +60,12 @@ export default function SignUpScreen() {
       />
 
       <View style={{ flexDirection: "row", justifyContent: "center", marginTop: 20 }}>
-      <Text>Already have an account?</Text>
+      <Text>Don&apos;t have an account? </Text>
       <Text
         style={{ color: "blue", fontWeight: "bold" }}
         onPress={() => router.push("/signup")}
       >
-        Log In
+        Sign Up
       </Text>
     </View>
 
@@ -70,9 +80,122 @@ export default function SignUpScreen() {
 }
 
 const styles = StyleSheet.create({
-  // ... basic styles for container, title, input, etc.
-  container: { flex: 1, justifyContent: 'center', padding: 20 },
-  title: { fontSize: 24, marginBottom: 20, textAlign: 'center' },
-  input: { borderWidth: 1, padding: 10, marginVertical: 8, borderRadius: 5 },
-  orText: { textAlign: "center", marginVertical: 12, color: "#a6a5bcff" },
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#F5F5F0', // Light beige/cream background
+  },
+  scrollContainer: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+  },
+  illustrationContainer: {
+    width: '100%',
+    height: height * 0.3,
+    alignItems: 'stretch',
+    justifyContent: 'flex-end',
+    paddingTop: 0,
+    paddingBottom: 20,
+    paddingHorizontal: 0,
+  },
+  illustration: {
+    width: '100%',
+    height: '100%',
+  },
+  illustrationPlaceholder: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: '#E8E8E8',
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  placeholderText: {
+    color: '#999',
+    fontSize: 16,
+  },
+  card: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    paddingHorizontal: 24,
+    paddingTop: 32,
+    paddingBottom: 40,
+    marginTop: -20,
+    flex: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 10,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#1E3A5F',
+    marginBottom: 32,
+    textAlign: 'center',
+  },
+  inputContainer: {
+    marginBottom: 20,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#333',
+    marginBottom: 8,
+  },
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F5F5F5',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    height: 56,
+  },
+  inputIcon: {
+    marginRight: 12,
+  },
+  input: {
+    flex: 1,
+    fontSize: 16,
+    color: '#333',
+  },
+  button: {
+    backgroundColor: '#1E3A5F', // Dark blue
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 24,
+    shadowColor: '#1E3A5F',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  buttonDisabled: {
+    opacity: 0.6,
+  },
+  buttonText: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  signInContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 24,
+  },
+  signInText: {
+    fontSize: 14,
+    color: '#666',
+  },
+  signInLink: {
+    fontSize: 14,
+    color: '#1E3A5F',
+    fontWeight: '600',
+  },
 });

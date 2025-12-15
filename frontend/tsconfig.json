@@ -1,5 +1,6 @@
 {
-  "extends": "expo/tsconfig.base",
+  // Resolve the Expo base config from this package's node_modules
+  "extends": "./node_modules/expo/tsconfig.base",
   "compilerOptions": {
     "strict": true,
     "paths": {
@@ -15,3 +16,4 @@
     "expo-env.d.ts"
   ]
 }
+

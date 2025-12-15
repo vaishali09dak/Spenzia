@@ -44,7 +44,7 @@ export default function SettingsScreen() {
         {/* Edit Profile */}
         <TouchableOpacity
           style={styles.item}
-          onPress={() => router.push("/(tabs)/profile")}
+          onPress={() => router.push("/(auth)/profile")}
         >
           <Ionicons name="person-outline" size={22} color="#1F305E" />
           <Text style={styles.itemText}>Edit Profile</Text>

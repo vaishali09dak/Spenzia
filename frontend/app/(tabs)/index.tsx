@@ -1,4 +1,7 @@
 import React, { useEffect, useState } from "react";
+import { auth, db1 } from "../../firebase";
+import { doc, getDoc } from "firebase/firestore";
+
 import {
   View,
   Text,
@@ -9,65 +12,80 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { PieChart } from "react-native-chart-kit";
+import { router } from "expo-router";
 
 const { height, width } = Dimensions.get("window");
 
 export default function HomeScreen() {
-  /* =========================
-     STATE (Backend-ready)
-     ========================= */
+  /* STATE (Backend-ready) */
   const [income, setIncome] = useState(0);
   const [expenses, setExpenses] = useState(0);
   const [budget, setBudget] = useState(0);
   const [expenseData, setExpenseData] = useState<any[]>([]);
 
-  /* =========================
-     DERIVED VALUES
-     ========================= */
+  /* DERIVED VALUES */
   const balance = income - expenses;
   const remaining = budget - expenses;
   const progress = budget > 0 ? expenses / budget : 0;
 
-  /* =========================
-     TEMP MOCK BACKEND
-     (Replace later with Firebase)
-     ========================= */
   useEffect(() => {
-    setIncome(50000);
-    setExpenses(2770);
-    setBudget(30000);
+  const fetchUserFinance = async () => {
+    try {
+      const user = auth.currentUser;
+      if (!user) return;
 
-    setExpenseData([
-      {
-        name: "Food",
-        amount: 1200,
-        color: "#5B8DEF",
-        legendFontColor: "#555",
-        legendFontSize: 12,
-      },
-      {
-        name: "Transport",
-        amount: 600,
-        color: "#FFB703",
-        legendFontColor: "#555",
-        legendFontSize: 12,
-      },
-      {
-        name: "Shopping",
-        amount: 500,
-        color: "#EF476F",
-        legendFontColor: "#555",
-        legendFontSize: 12,
-      },
-      {
-        name: "Other",
-        amount: 470,
-        color: "#06D6A0",
-        legendFontColor: "#555",
-        legendFontSize: 12,
-      },
-    ]);
-  }, []);
+      const userRef = doc(db1, "users", user.uid);
+      const userSnap = await getDoc(userRef);
+
+      if (userSnap.exists()) {
+        const data = userSnap.data();
+
+        setIncome(data.monthlyIncome || 0);
+        setBudget(data.monthlyBudget || 0);
+      }
+
+      // TEMP expenses (replace later with transactions sum)
+      setExpenses(2770);
+
+      // TEMP category breakdown
+      setExpenseData([
+        {
+          name: "Food",
+          amount: 1200,
+          color: "#5B8DEF",
+          legendFontColor: "#555",
+          legendFontSize: 12,
+        },
+        {
+          name: "Transport",
+          amount: 600,
+          color: "#FFB703",
+          legendFontColor: "#555",
+          legendFontSize: 12,
+        },
+        {
+          name: "Shopping",
+          amount: 500,
+          color: "#EF476F",
+          legendFontColor: "#555",
+          legendFontSize: 12,
+        },
+        {
+          name: "Other",
+          amount: 470,
+          color: "#06D6A0",
+          legendFontColor: "#555",
+          legendFontSize: 12,
+        },
+      ]);
+    } catch (error) {
+      console.error("Error fetching finance data:", error);
+    }
+  };
+
+  fetchUserFinance();
+}, []);
+
 
   return (
     <SafeAreaView style={styles.container}>
@@ -75,7 +93,9 @@ export default function HomeScreen() {
       <View style={styles.topSection}>
         <View style={styles.header}>
           <Ionicons name="grid-outline" size={24} color="#fff" />
-          <Ionicons name="person-circle-outline" size={32} color="#fff" />
+          <TouchableOpacity onPress={() => router.push("/(auth)/dashboard")}>
+            <Ionicons name="person-circle-outline" size={32} color="#fff" />
+          </TouchableOpacity>
         </View>
 
         <View style={{ marginTop: 30 }}>
@@ -259,7 +279,7 @@ const styles = StyleSheet.create({
 
   progressFill: {
     height: "100%",
-    backgroundColor: "#5B8DEF",
+    backgroundColor: "#1F305E",
   },
 
   budgetFooter: {
@@ -274,7 +294,7 @@ const styles = StyleSheet.create({
 
   fab: {
     position: "absolute",
-    bottom: 24,
+    bottom: 16,
     right: 24,
     backgroundColor: "#5B8DEF",
     width: 58,

@@ -29,6 +29,9 @@ export default function RootLayout() {
           name="login" 
           options={{ title: 'Welcome Back', headerShown: false }} 
         />
+
+        {/* 4. Dashboard Screen (REQUIRED!) */}
+        <Stack.Screen name="dashboard" />
        
       </Stack>
       <StatusBar style="auto" />

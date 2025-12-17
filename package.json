@@ -1,6 +1,7 @@
 {
   "dependencies": {
     "expo-auth-session": "^7.0.10",
+    "expo-blur": "~15.0.8",
     "expo-router": "^6.0.17",
     "firebase": "^12.6.0",
     "react-native-chart-kit": "^6.12.0",

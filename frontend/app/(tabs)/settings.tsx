@@ -26,8 +26,16 @@ export default function SettingsScreen() {
           text: "Logout",
           style: "destructive",
           onPress: async () => {
-            await signOut(auth);
-            // Auth guard will auto-redirect to login
+            try {
+              await signOut(auth);
+              // Force navigation to welcome screen after logout
+              // The root layout should handle this, but explicit navigation ensures it works
+              setTimeout(() => {
+                router.replace("/(auth)/welcome");
+              }, 100);
+            } catch (error: any) {
+              Alert.alert("Error", error.message || "Failed to logout. Please try again.");
+            }
           },
         },
       ]
@@ -44,7 +52,7 @@ export default function SettingsScreen() {
         {/* Edit Profile */}
         <TouchableOpacity
           style={styles.item}
-          onPress={() => router.push("/(tabs)/profile")}
+          onPress={() => router.push("/(auth)/profile")}
         >
           <Ionicons name="person-outline" size={22} color="#1F305E" />
           <Text style={styles.itemText}>Edit Profile</Text>

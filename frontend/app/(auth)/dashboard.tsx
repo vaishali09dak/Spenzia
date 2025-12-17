@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 
 import {
   View,
@@ -21,36 +22,44 @@ export default function DashboardScreen() {
   const [userData, setUserData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchUserData = async () => {
-      try {
-        const user = auth.currentUser;
-        if (user) {
-          const userDoc = await getDoc(doc(db1, "users", user.uid));
-          if (userDoc.exists()) {
-            setUserData({
-              ...userDoc.data(),
-              email: user.email || "Not provided",
-            });
-          } else {
-            // If user doc doesn't exist, use auth data
-            setUserData({
-              fullName: user.displayName || "User",
-              email: user.email || "Not provided",
-              phone: "Not provided",
-              age: "Not provided",
-            });
-          }
+  const fetchUserData = async () => {
+    try {
+      const user = auth.currentUser;
+      if (user) {
+        const userDoc = await getDoc(doc(db1, "users", user.uid));
+        if (userDoc.exists()) {
+          setUserData({
+            ...userDoc.data(),
+            email: user.email || "Not provided",
+          });
+        } else {
+          // If user doc doesn't exist, use auth data
+          setUserData({
+            fullName: user.displayName || "User",
+            email: user.email || "Not provided",
+            phone: "Not provided",
+            age: "Not provided",
+          });
         }
-      } catch (error) {
-        console.error("Error fetching user data:", error);
-      } finally {
-        setLoading(false);
       }
-    };
+    } catch (error) {
+      console.error("Error fetching user data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  // Fetch data when component mounts
+  useEffect(() => {
     fetchUserData();
   }, []);
+
+  // Refetch data when screen comes into focus (e.g., returning from profile edit)
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchUserData();
+    }, [])
+  );
 
   return (
     <SafeAreaView style={styles.container}>

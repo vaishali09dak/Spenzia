@@ -28,6 +28,8 @@ export default function SignUpScreen() {
     try {
       await createUserWithEmailAndPassword(auth, email, password);
       router.replace("/(auth)/userdetails");
+
+
     } catch (error: any) {
       Alert.alert("Sign Up Failed", error.message);
     } finally {

@@ -1,7 +1,6 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { auth, db1 } from "../../firebase";
 import { doc, getDoc } from "firebase/firestore";
-
 import {
   View,
   Text,
@@ -9,14 +8,39 @@ import {
   SafeAreaView,
   TouchableOpacity,
   Dimensions,
+  Animated
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { PieChart } from "react-native-chart-kit";
 import { router } from "expo-router";
+import { BlurView } from "expo-blur";
+
 
 const { height, width } = Dimensions.get("window");
+const MENU_WIDTH = width * 0.75;
 
 export default function HomeScreen() {
+
+  /* SIDE MENU ANIMATION */
+  const [menuOpen, setMenuOpen] = useState(false);
+  const slideAnim = useRef(new Animated.Value(-MENU_WIDTH)).current;
+  const openMenu = () => {
+    setMenuOpen(true);
+    Animated.timing(slideAnim, {
+      toValue: 0,
+      duration: 250,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const closeMenu = () => {
+    Animated.timing(slideAnim, {
+      toValue: -MENU_WIDTH,
+      duration: 250,
+      useNativeDriver: true,
+    }).start(() => setMenuOpen(false));
+  };
+
   /* STATE (Backend-ready) */
   const [income, setIncome] = useState(0);
   const [expenses, setExpenses] = useState(0);
@@ -92,7 +116,9 @@ export default function HomeScreen() {
       {/* 🔵 TOP SECTION */}
       <View style={styles.topSection}>
         <View style={styles.header}>
-          <Ionicons name="grid-outline" size={24} color="#fff" />
+          <TouchableOpacity onPress={openMenu}>
+            <Ionicons name="menu" size={26} color="#fff" />
+          </TouchableOpacity>          
           <TouchableOpacity onPress={() => router.push("/(auth)/dashboard")}>
             <Ionicons name="person-circle-outline" size={32} color="#fff" />
           </TouchableOpacity>
@@ -166,10 +192,53 @@ export default function HomeScreen() {
         <Ionicons name="add" size={28} color="#fff" />
       </TouchableOpacity>
 
-</SafeAreaView>
+      {/* 🌫 BLUR OVERLAY */}
+{menuOpen && (
+  <TouchableOpacity
+    style={StyleSheet.absoluteFill}
+    activeOpacity={1}
+    onPress={closeMenu}
+  >
+    <BlurView
+      intensity={40}
+      tint="light"
+      style={StyleSheet.absoluteFillObject}
+    />
+  </TouchableOpacity>
+)}
 
+{/* 📂 SLIDING SIDE MENU */}
+<Animated.View
+  style={[
+    styles.sideMenu,
+    { transform: [{ translateX: slideAnim }] },
+  ]}
+>
+  <Text style={styles.menuTitle}>Spenzia</Text>
+
+  <MenuItem icon="pulse-outline" label="Expense Heatmap" />
+  <MenuItem icon="list-outline" label="Recent Transactions" />
+  <MenuItem icon="folder-outline" label="Category Manager" />
+  <MenuItem icon="wallet-outline" label="Savings Goal" />
+  <MenuItem icon="stats-chart-outline" label="Monthly Reports" />
+  <MenuItem icon="trending-up-outline" label="Spending Insights" /> 
+  <MenuItem icon="alert-circle-outline" label="Alerts" />
+
+</Animated.View>
+
+    </SafeAreaView>
   );
 }
+
+function MenuItem({ icon, label }: any) {
+  return (
+    <TouchableOpacity style={styles.menuItem}>
+      <Ionicons name={icon} size={20} color="#444" />
+      <Text style={styles.menuText}>{label}</Text>
+    </TouchableOpacity>
+  );
+}
+
 
 /* =========================
    STYLES
@@ -306,4 +375,36 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     elevation: 6,
   },
+
+  sideMenu: {
+  position: "absolute",
+  left: 0,
+  top: 0,
+  bottom: 0,
+  width: MENU_WIDTH,
+  backgroundColor: "#fff",
+  paddingTop: 60,
+  paddingHorizontal: 20,
+  elevation: 12,
+  zIndex: 20,
+},
+
+menuTitle: {
+  fontSize: 20,
+  fontWeight: "700",
+  marginBottom: 30,
+},
+
+menuItem: {
+  flexDirection: "row",
+  alignItems: "center",
+  paddingVertical: 14,
+},
+
+menuText: {
+  marginLeft: 16,
+  fontSize: 16,
+  color: "#333",
+},
+
 });

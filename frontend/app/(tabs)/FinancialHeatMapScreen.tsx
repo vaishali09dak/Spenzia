@@ -662,7 +662,7 @@ const FinancialHeatMapScreen = () => {
             </View>
           )}
         </View>
-        <ScrollView style={styles.contentScrollView}>
+        <ScrollView style={styles.contentScrollView} keyboardShouldPersistTaps="handled">
             <View style={styles.contentCard}>
               {renderContent()}
             </View>
@@ -745,7 +745,11 @@ const FinancialHeatMapScreen = () => {
                 </View>
               </View>
 
-              <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
+              <ScrollView
+                style={styles.modalBody}
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="always"
+              >
                 <View style={styles.tagsCard}>
                   <Text style={styles.tagsTitle}>Your Categories</Text>
 

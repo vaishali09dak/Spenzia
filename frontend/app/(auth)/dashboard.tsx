@@ -93,6 +93,14 @@ export default function DashboardScreen() {
 
         {/* ⚪ CONTENT */}
         <View style={styles.content}>
+          {/* TEMP LINK TO HEATMAP */}
+          <TouchableOpacity
+            style={styles.button}
+            onPress={() => router.push("/_sitemap")}
+          >
+            <Text style={styles.buttonText}>Financial Heatmap</Text>
+          </TouchableOpacity>
+
           {/* MY DETAILS SECTION */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
@@ -333,5 +341,17 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "700",
     color: "#5B8DEF",
+  },
+  button: {
+    backgroundColor: '#5B8DEF',
+    padding: 15,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  buttonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
   },
 });

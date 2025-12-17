@@ -15,6 +15,7 @@ import { PieChart } from "react-native-chart-kit";
 import { router } from "expo-router";
 import { BlurView } from "expo-blur";
 
+import ExpenseFabModal from '../(auth)/ExpenseFabModal';
 
 const { height, width } = Dimensions.get("window");
 const MENU_WIDTH = width * 0.75;
@@ -110,7 +111,7 @@ export default function HomeScreen() {
   fetchUserFinance();
 }, []);
 
-
+const [fabModalVisible, setFabModalVisible] = useState(false);
   return (
     <SafeAreaView style={styles.container}>
       {/* 🔵 TOP SECTION */}
@@ -188,9 +189,10 @@ export default function HomeScreen() {
       </View>
 
       {/* ➕ ADD EXPENSE */}
-      <TouchableOpacity style={styles.fab} >
+      <TouchableOpacity style={styles.fab} onPress={() => setFabModalVisible(true)} >
         <Ionicons name="add" size={28} color="#fff" />
       </TouchableOpacity>
+      <ExpenseFabModal visible={fabModalVisible} onClose={() => setFabModalVisible(false)} />
 
       {/* 🌫 BLUR OVERLAY */}
 {menuOpen && (

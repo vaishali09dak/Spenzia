@@ -9,8 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-
-const { height } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
 
 export default function SignUpScreen() {
   const [email, setEmail] = useState('');

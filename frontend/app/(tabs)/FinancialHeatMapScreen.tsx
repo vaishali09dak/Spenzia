@@ -133,7 +133,7 @@ type HeaderProps = {
 
 const Header = ({ onPressSettings }: HeaderProps) => (
   <View style={styles.header}>
-    <Text style={styles.headerTitle}>Spenzia Insights</Text>
+    <Text style={styles.headerTitle}>Expense Heatmap</Text>
     <TouchableOpacity onPress={onPressSettings}>
       <Feather name="settings" size={24} color={PRIMARY} />
     </TouchableOpacity>
@@ -165,11 +165,12 @@ type HeatmapCellProps = {
     onCellPress: (date: Date | null, amount: number | null) => void;
     categories: HeatmapCategory[];
     cellSize?: number;
+    cellMargin?: number;
     showLabel?: boolean;
     disabled?: boolean;
 }
 
-const HeatmapCell = ({ date, amount, onCellPress, categories, cellSize, showLabel = true, disabled }: HeatmapCellProps) => {
+const HeatmapCell = ({ date, amount, onCellPress, categories, cellSize, cellMargin, showLabel = true, disabled }: HeatmapCellProps) => {
     const resolved = resolveCategoryForAmount(amount, categories);
     const isPlaceholder = Boolean(disabled && !date);
     const color =
@@ -184,7 +185,12 @@ const HeatmapCell = ({ date, amount, onCellPress, categories, cellSize, showLabe
     <TouchableOpacity
       disabled={disabled}
       onPress={handlePress}
-      style={[styles.cell, cellSize ? { width: cellSize, height: cellSize } : null, { backgroundColor: color }]}
+      style={[
+        styles.cell,
+        cellSize ? { width: cellSize, height: cellSize } : null,
+        cellMargin !== undefined ? { margin: cellMargin } : null,
+        { backgroundColor: color },
+      ]}
     >
         <Text style={styles.cellText}>{showLabel && date ? format(date, 'd') : ''}</Text>
     </TouchableOpacity>
@@ -199,7 +205,7 @@ type HeatmapViewProps = {
     categories: HeatmapCategory[];
 }
 
-const YEAR_MINI_CELL_SIZE = 10;
+const YEAR_MINI_CELL_SIZE = 8;
 
 const YearView = ({ expenses, onCellPress, anchorDate, categories }: HeatmapViewProps) => {
   const year = anchorDate.getFullYear();
@@ -246,6 +252,7 @@ const YearView = ({ expenses, onCellPress, anchorDate, categories }: HeatmapView
                 onCellPress={onCellPress}
                 categories={categories}
                 cellSize={YEAR_MINI_CELL_SIZE}
+                cellMargin={1}
                 showLabel={false}
                 disabled={!date}
               />
@@ -266,7 +273,8 @@ const MonthView = ({ expenses, onCellPress, anchorDate, categories }: HeatmapVie
       
       const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
       
-      let grid: HeatmapCellData[] = [];
+      const leadingPlaceholders = (monthStart.getDay() + 6) % 7;
+      let grid: HeatmapCellData[] = Array.from({ length: leadingPlaceholders }, () => ({ date: null, amount: null }));
       days.forEach((day: Date) => {
         const expense = expenses.find((e: Expense) => e.date === format(day, 'yyyy-MM-dd'));
         grid.push({ date: day, amount: expense ? expense.amount : null });
@@ -284,6 +292,7 @@ const MonthView = ({ expenses, onCellPress, anchorDate, categories }: HeatmapVie
             amount={amount}
             onCellPress={onCellPress}
             categories={categories}
+            disabled={!date}
           />
         ))}
       </View>
@@ -291,6 +300,8 @@ const MonthView = ({ expenses, onCellPress, anchorDate, categories }: HeatmapVie
   };
 
 const FinancialHeatMapScreen = () => {
+  const MIN_FILTER_YEAR = 2020;
+  const MAX_FILTER_YEAR = 2026;
   const [view, setView] = useState<'YEAR' | 'MONTH'>('YEAR');
   const [categories, setCategories] = useState<HeatmapCategory[]>([]);
   const [isColorSettingsVisible, setIsColorSettingsVisible] = useState(false);
@@ -366,11 +377,20 @@ const FinancialHeatMapScreen = () => {
 
   const shiftAnchorDate = (direction: -1 | 1) => {
     if (view !== 'MONTH') return;
-    setAnchorDate((prev) => addMonths(prev, direction));
+    setAnchorDate((prev) => {
+      const next = addMonths(prev, direction);
+      const minDate = new Date(MIN_FILTER_YEAR, 0, 1);
+      const maxDate = new Date(MAX_FILTER_YEAR, 11, 31, 23, 59, 59, 999);
+      if (next < minDate || next > maxDate) return prev;
+      return next;
+    });
   };
 
   const openDateFilter = () => {
-    setDraftAnchorDate(anchorDate);
+    const minDate = new Date(MIN_FILTER_YEAR, 0, 15);
+    const maxDate = new Date(MAX_FILTER_YEAR, 11, 15);
+    const clamped = anchorDate < minDate ? minDate : anchorDate > maxDate ? maxDate : anchorDate;
+    setDraftAnchorDate(clamped);
     setIsDateFilterVisible(true);
   };
 
@@ -379,7 +399,11 @@ const FinancialHeatMapScreen = () => {
   };
 
   const saveDateFilter = () => {
-    setAnchorDate(new Date(draftAnchorDate.getFullYear(), draftAnchorDate.getMonth(), 15));
+    const candidate = new Date(draftAnchorDate.getFullYear(), draftAnchorDate.getMonth(), 15);
+    const minDate = new Date(MIN_FILTER_YEAR, 0, 15);
+    const maxDate = new Date(MAX_FILTER_YEAR, 11, 15);
+    const clamped = candidate < minDate ? minDate : candidate > maxDate ? maxDate : candidate;
+    setAnchorDate(clamped);
     setIsDateFilterVisible(false);
   };
 
@@ -493,7 +517,10 @@ const FinancialHeatMapScreen = () => {
                 <View style={styles.filterSection}>
                   <Text style={styles.filterSectionTitle}>Year</Text>
                   <View style={styles.yearChipRow}>
-                    {[2025].map((y) => {
+                    {Array.from(
+                      { length: MAX_FILTER_YEAR - MIN_FILTER_YEAR + 1 },
+                      (_, i) => MIN_FILTER_YEAR + i
+                    ).map((y) => {
                       const isActive = y === draftAnchorDate.getFullYear();
                       return (
                         <TouchableOpacity
@@ -521,7 +548,7 @@ const FinancialHeatMapScreen = () => {
                             onPress={() => setDraftAnchorDate(new Date(draftAnchorDate.getFullYear(), m, 15))}
                           >
                             <Text style={[styles.monthChipText, isActive ? styles.monthChipTextActive : null]}>
-                              {format(new Date(2025, m, 1), 'MMM')}
+                              {format(new Date(draftAnchorDate.getFullYear(), m, 1), 'MMM')}
                             </Text>
                           </TouchableOpacity>
                         );
@@ -772,7 +799,9 @@ const styles = StyleSheet.create({
   yearMiniGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
+    alignSelf: 'center',
+    width: (YEAR_MINI_CELL_SIZE + 2) * 7,
   },
   yearGrid: {
     flexDirection: 'row',

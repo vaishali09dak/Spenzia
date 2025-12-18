@@ -24,6 +24,14 @@ export default function TabsLayout() {
         }}
       />
 
+      <Tabs.Screen
+        name="CategoryManager"
+        options={{
+          href: null,
+          tabBarStyle: { display: 'none' },
+        }}
+      />
+
       {/* <Tabs.Screen
         name="explore"
         options={{

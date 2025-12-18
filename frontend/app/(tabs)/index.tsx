@@ -228,7 +228,8 @@ const [fabModalVisible, setFabModalVisible] = useState(false);
   />
   <MenuItem icon="list-outline" label="Recent Transactions" />
   <MenuItem icon="folder-outline" label="Category Manager" />
-  <MenuItem icon="wallet-outline" label="Savings Goal" />
+  <MenuItem icon="wallet-outline" label="Savings Goal" 
+     />
   <MenuItem icon="stats-chart-outline" label="Monthly Reports" />
   <MenuItem icon="trending-up-outline" label="Spending Insights" /> 
   <MenuItem icon="alert-circle-outline" label="Alerts" />

@@ -93,13 +93,6 @@ export default function DashboardScreen() {
 
         {/* ⚪ CONTENT */}
         <View style={styles.content}>
-          {/* TEMP LINK TO HEATMAP */}
-          <TouchableOpacity
-            style={styles.button}
-            onPress={() => router.push("/_sitemap")}
-          >
-            <Text style={styles.buttonText}>Financial Heatmap</Text>
-          </TouchableOpacity>
 
           {/* MY DETAILS SECTION */}
           <View style={styles.section}>

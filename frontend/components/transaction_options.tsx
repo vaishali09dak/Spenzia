@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 
-import { ActionType } from '../app/(tabs)/transaction';
+type ActionType = 'expense' | 'income' | 'category';
 
 
 type ActionOption = {
@@ -57,7 +57,12 @@ export default function QuickActionOptions({ onSelect }: Props) {
       { backgroundColor: option.colors[0] } // Use the first color as a solid background
     ]} 
   >
-    {/* ... card content inside ... */}
+    <Text style={styles.icon}>{option.icon}</Text>
+    <View style={{ flex: 1 }}>
+      <Text style={styles.title}>{option.title}</Text>
+      <Text style={styles.subtitle}>{option.subtitle}</Text>
+    </View>
+    <Text style={styles.arrow}>›</Text>
   </View>
 </TouchableOpacity>
       ))}

@@ -9,11 +9,10 @@ import {
   Dimensions,
   Alert,
   Modal,
-  TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
-import { eachDayOfInterval, startOfWeek, endOfWeek, addDays, format, getDaysInMonth, startOfMonth } from 'date-fns';
+import { eachDayOfInterval, startOfWeek, endOfWeek, addDays, addMonths, format, getDaysInMonth, startOfMonth } from 'date-fns';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 import { auth, db1 } from '../../firebase';
@@ -48,80 +47,39 @@ type HeatmapCategory =
 const NEUTRAL_EMPTY_COLOR = '#e0e0e0';
 const NEUTRAL_UNCATEGORIZED_COLOR = '#f2f2f2';
 
-const generateId = () => `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+const FIXED_EMPTY_LABEL = 'No spending';
+const FIXED_SAFE_LABEL = 'Safe';
+const FIXED_WARNING_LABEL = 'Warning';
+const FIXED_DANGER_LABEL = 'Danger';
 
-const normalizeCategories = (value: unknown): HeatmapCategory[] | null => {
-  if (!Array.isArray(value)) return null;
-  const items = value
-    .filter((v) => v && typeof v === 'object')
-    .map((v) => v as Record<string, unknown>)
-    .map((raw) => {
-      const id = typeof raw.id === 'string' ? raw.id : generateId();
-      const type = raw.type === 'EMPTY' || raw.type === 'RANGE' ? raw.type : null;
-      const label = typeof raw.label === 'string' ? raw.label.trim() : '';
-      const color = typeof raw.color === 'string' ? raw.color : '';
-      if (!type || !label || !color) return null;
+const FIXED_EMPTY_COLOR = '#E5E7EB';
+const FIXED_SAFE_COLOR = '#22C55E';
+const FIXED_WARNING_COLOR = '#F59E0B';
+const FIXED_DANGER_COLOR = '#EF4444';
 
-      if (type === 'EMPTY') {
-        return { id, type: 'EMPTY', label, color } as HeatmapCategory;
-      }
+const DEFAULT_SAFE_LIMIT = 50;
+const DEFAULT_DANGER_LIMIT = 150;
+const THRESHOLD_STEP = 10;
 
-      const min = typeof raw.min === 'number' ? raw.min : NaN;
-      const max = raw.max === null ? null : typeof raw.max === 'number' ? raw.max : NaN;
-      if (!Number.isFinite(min) || min < 0) return null;
-      if (max !== null && (!Number.isFinite(max) || max < min)) return null;
-      return { id, type: 'RANGE', label, color, min, max } as HeatmapCategory;
-    })
-    .filter((v): v is HeatmapCategory => Boolean(v));
+const FIXED_EMPTY_ID = 'no-spending';
+const FIXED_SAFE_ID = 'safe';
+const FIXED_WARNING_ID = 'warning';
+const FIXED_DANGER_ID = 'danger';
 
-  return items;
-};
-
-type LegacyHeatmapColors = {
-  empty: string;
-  safe: string;
-  warning: string;
-  danger: string;
-};
-
-type LegacyHeatmapLabels = {
-  empty: string;
-  safe: string;
-  warning: string;
-  danger: string;
+const buildFixedCategories = (safeLimit: number, dangerLimit: number): HeatmapCategory[] => {
+  const safe = Math.min(safeLimit, dangerLimit);
+  const danger = Math.max(safeLimit, dangerLimit);
+  return [
+    { id: FIXED_EMPTY_ID, type: 'EMPTY', label: FIXED_EMPTY_LABEL, color: FIXED_EMPTY_COLOR },
+    { id: FIXED_SAFE_ID, type: 'RANGE', label: FIXED_SAFE_LABEL, color: FIXED_SAFE_COLOR, min: 0, max: safe },
+    { id: FIXED_WARNING_ID, type: 'RANGE', label: FIXED_WARNING_LABEL, color: FIXED_WARNING_COLOR, min: safe, max: danger },
+    { id: FIXED_DANGER_ID, type: 'RANGE', label: FIXED_DANGER_LABEL, color: FIXED_DANGER_COLOR, min: danger, max: null },
+  ];
 };
 
 type LegacyHeatmapThresholds = {
   safeLimit: number;
   dangerLimit: number;
-};
-
-type LegacyExtraCategory = {
-  label: string;
-  limit: number;
-  color: string;
-};
-
-const normalizeLegacyColors = (value: unknown): LegacyHeatmapColors | null => {
-  if (!value || typeof value !== 'object') return null;
-  const maybe = value as Partial<Record<keyof LegacyHeatmapColors, unknown>>;
-  const empty = typeof maybe.empty === 'string' ? maybe.empty : '';
-  const safe = typeof maybe.safe === 'string' ? maybe.safe : '';
-  const warning = typeof maybe.warning === 'string' ? maybe.warning : '';
-  const danger = typeof maybe.danger === 'string' ? maybe.danger : '';
-  if (!empty || !safe || !warning || !danger) return null;
-  return { empty, safe, warning, danger };
-};
-
-const normalizeLegacyLabels = (value: unknown): LegacyHeatmapLabels | null => {
-  if (!value || typeof value !== 'object') return null;
-  const maybe = value as Partial<Record<keyof LegacyHeatmapLabels, unknown>>;
-  const empty = typeof maybe.empty === 'string' ? maybe.empty.trim() : '';
-  const safe = typeof maybe.safe === 'string' ? maybe.safe.trim() : '';
-  const warning = typeof maybe.warning === 'string' ? maybe.warning.trim() : '';
-  const danger = typeof maybe.danger === 'string' ? maybe.danger.trim() : '';
-  if (!empty || !safe || !warning || !danger) return null;
-  return { empty, safe, warning, danger };
 };
 
 const normalizeLegacyThresholds = (value: unknown): LegacyHeatmapThresholds | null => {
@@ -132,112 +90,6 @@ const normalizeLegacyThresholds = (value: unknown): LegacyHeatmapThresholds | nu
   if (!Number.isFinite(safeLimit) || !Number.isFinite(dangerLimit)) return null;
   return { safeLimit: Math.max(0, safeLimit), dangerLimit: Math.max(0, dangerLimit) };
 };
-
-const normalizeLegacyExtraCategories = (value: unknown): LegacyExtraCategory[] | null => {
-  if (!Array.isArray(value)) return null;
-  const items = value
-    .filter((v) => v && typeof v === 'object')
-    .map((v) => v as Partial<Record<keyof LegacyExtraCategory, unknown>>)
-    .map((maybe) => {
-      const label = typeof maybe.label === 'string' ? maybe.label.trim() : '';
-      const limit = typeof maybe.limit === 'number' ? maybe.limit : NaN;
-      const color = typeof maybe.color === 'string' ? maybe.color : '';
-      return { label, limit, color };
-    })
-    .filter((c) => c.label.length > 0 && Number.isFinite(c.limit) && c.limit >= 0 && c.color.length > 0);
-  return items;
-};
-
-type ExtraCategoryRowProps = {
-  category: HeatmapCategory;
-  onChangeLabel: (id: string, label: string) => void;
-  onChangeMin: (id: string, value: string) => void;
-  onChangeMax: (id: string, value: string) => void;
-  onChangeColor: (id: string, color: string) => void;
-  onRemove: (id: string) => void;
-};
-
-const ExtraCategoryRow = ({ category, onChangeLabel, onChangeMin, onChangeMax, onChangeColor, onRemove }: ExtraCategoryRowProps) => (
-  <View style={styles.extraCategoryRow}>
-    <View style={styles.extraCategoryHeader}>
-      <TextInput
-        style={styles.extraCategoryLabelInput}
-        value={category.label}
-        onChangeText={(v) => onChangeLabel(category.id, v)}
-        placeholder="Label"
-        placeholderTextColor="rgba(0,0,0,0.4)"
-        autoCapitalize="sentences"
-      />
-      <TouchableOpacity onPress={() => onRemove(category.id)} style={styles.extraCategoryRemoveBtn}>
-        <Feather name="trash-2" size={16} color={PRIMARY} />
-      </TouchableOpacity>
-    </View>
-
-    {category.type === 'EMPTY' ? (
-      <Text style={styles.tagsEmptyText}>Applies when there is no spending.</Text>
-    ) : (
-      <View style={styles.extraCategoryRangeRow}>
-        <View style={styles.extraCategoryRangeField}>
-          <Text style={styles.thresholdLabel}>Min</Text>
-          <TextInput
-            style={styles.thresholdInput}
-            value={String(category.min)}
-            onChangeText={(v) => onChangeMin(category.id, v)}
-            keyboardType="numeric"
-          />
-        </View>
-        <View style={styles.extraCategoryRangeField}>
-          <Text style={styles.thresholdLabel}>Max</Text>
-          <TextInput
-            style={styles.thresholdInput}
-            value={category.max === null ? '' : String(category.max)}
-            onChangeText={(v) => onChangeMax(category.id, v)}
-            keyboardType="numeric"
-            placeholder="∞"
-            placeholderTextColor="rgba(0,0,0,0.4)"
-          />
-        </View>
-      </View>
-    )}
-
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.extraCategoryColorRow}>
-      {EXTRA_CATEGORY_COLOR_PRESETS.map((preset) => (
-        <TouchableOpacity
-          key={`${category.id}-${preset}`}
-          onPress={() => onChangeColor(category.id, preset)}
-          style={[
-            styles.colorSwatch,
-            { backgroundColor: preset },
-            preset.toLowerCase() === category.color.toLowerCase() ? styles.colorSwatchSelected : null,
-          ]}
-        />
-      ))}
-    </ScrollView>
-  </View>
-);
-
-const EXTRA_CATEGORY_COLOR_PRESETS = [
-  '#4caf50',
-  '#22c55e',
-  '#10b981',
-  '#0ea5e9',
-  '#6366f1',
-  '#ffeb3b',
-  '#fbbf24',
-  '#f59e0b',
-  '#f97316',
-  '#fde047',
-  '#f44336',
-  '#ef4444',
-  '#e11d48',
-  '#db2777',
-  '#dc2626',
-  '#e0e0e0',
-  '#f2f2f2',
-  '#cfcfcf',
-  '#bdbdbd',
-  '#9e9e9e',
-];
 
 type HeatmapCellData = {
     date: Date | null;
@@ -319,7 +171,10 @@ type HeatmapCellProps = {
 
 const HeatmapCell = ({ date, amount, onCellPress, categories, cellSize, showLabel = true, disabled }: HeatmapCellProps) => {
     const resolved = resolveCategoryForAmount(amount, categories);
-    const color = resolved?.color ?? (amount === null || amount === undefined ? NEUTRAL_EMPTY_COLOR : NEUTRAL_UNCATEGORIZED_COLOR);
+    const isPlaceholder = Boolean(disabled && !date);
+    const color =
+      (isPlaceholder ? 'transparent' : resolved?.color) ??
+      (amount === null || amount === undefined ? NEUTRAL_EMPTY_COLOR : NEUTRAL_UNCATEGORIZED_COLOR);
 
     const handlePress = () => {
         onCellPress(date, amount);
@@ -344,72 +199,63 @@ type HeatmapViewProps = {
     categories: HeatmapCategory[];
 }
 
-const YEAR_CELL_SIZE = 16;
+const YEAR_MINI_CELL_SIZE = 10;
 
-const YearView = ({ expenses, onCellPress, categories }: HeatmapViewProps) => {
-    const year = 2025;
-    const yearStart = useMemo(() => new Date(year, 0, 1), [year]);
-    const yearEnd = useMemo(() => new Date(year, 11, 31), [year]);
+const YearView = ({ expenses, onCellPress, anchorDate, categories }: HeatmapViewProps) => {
+  const year = anchorDate.getFullYear();
 
-    const { weeks, monthLabels } = useMemo(() => {
-      
-      const gridStart = startOfWeek(yearStart);
-      const gridEnd = endOfWeek(yearEnd);
-      const days = eachDayOfInterval({ start: gridStart, end: gridEnd });
+  const monthGrids = useMemo(() => {
+    return Array.from({ length: 12 }, (_, monthIndex) => {
+      const monthStart = new Date(year, monthIndex, 1);
+      const monthEnd = addDays(monthStart, getDaysInMonth(monthStart) - 1);
 
-      const dayData: HeatmapCellData[] = days.map((day: Date) => {
-        if (day < yearStart || day > yearEnd) return { date: null, amount: null };
+      const gridStart = startOfWeek(monthStart);
+      const gridEnd = endOfWeek(monthEnd);
+      let days = eachDayOfInterval({ start: gridStart, end: gridEnd });
+      while (days.length < 42) {
+        days = [...days, addDays(days[days.length - 1], 1)];
+      }
+
+      const data: HeatmapCellData[] = days.map((day) => {
+        if (day.getFullYear() !== year || day.getMonth() !== monthIndex) {
+          return { date: null, amount: null };
+        }
         const expense = expenses.find((e: Expense) => e.date === format(day, 'yyyy-MM-dd'));
         return { date: day, amount: expense ? expense.amount : null };
       });
 
-      const chunked: HeatmapCellData[][] = [];
-      const labels: string[] = [];
-      for (let i = 0; i < dayData.length; i += 7) {
-        const week = dayData.slice(i, i + 7);
-        chunked.push(week);
+      return {
+        monthIndex,
+        label: format(monthStart, 'MMM'),
+        data,
+      };
+    });
+  }, [expenses, year]);
 
-        const firstDate = week.find((d) => d.date)?.date ?? null;
-        if (!firstDate) {
-          labels.push('');
-          continue;
-        }
-
-        const prevWeek = chunked.length > 1 ? chunked[chunked.length - 2] : null;
-        const prevFirstDate = prevWeek?.find((d) => d.date)?.date ?? null;
-
-        const isNewMonth = !prevFirstDate || prevFirstDate.getMonth() !== firstDate.getMonth();
-        const shouldShow = isNewMonth && firstDate.getDate() <= 7;
-        labels.push(shouldShow ? format(firstDate, 'MMM') : '');
-      }
-
-      return { weeks: chunked, monthLabels: labels };
-    }, [expenses, yearEnd, yearStart]);
-  
-    return (
-      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-        <View style={styles.yearGrid}>
-          {weeks.map((week, weekIndex: number) => (
-            <View key={weekIndex} style={styles.yearWeekColumn}>
-              <Text style={styles.yearMonthLabel}>{monthLabels[weekIndex] || ''}</Text>
-              {week.map(({ date, amount }, dayIndex: number) => (
-                <HeatmapCell
-                  key={`${weekIndex}-${dayIndex}`}
-                  date={date}
-                  amount={amount}
-                  onCellPress={onCellPress}
-                  categories={categories}
-                  cellSize={YEAR_CELL_SIZE}
-                  showLabel={false}
-                  disabled={!date}
-                />
-              ))}
-            </View>
-          ))}
+  return (
+    <View style={styles.yearMonthsGrid}>
+      {monthGrids.map((m) => (
+        <View key={m.monthIndex} style={styles.yearMonthCard}>
+          <Text style={styles.yearMonthTitle}>{m.label}</Text>
+          <View style={styles.yearMiniGrid}>
+            {m.data.map(({ date, amount }, idx) => (
+              <HeatmapCell
+                key={`${m.monthIndex}-${idx}`}
+                date={date}
+                amount={amount}
+                onCellPress={onCellPress}
+                categories={categories}
+                cellSize={YEAR_MINI_CELL_SIZE}
+                showLabel={false}
+                disabled={!date}
+              />
+            ))}
+          </View>
         </View>
-      </ScrollView>
-    );
-  };
+      ))}
+    </View>
+  );
+};
   
 
 const MonthView = ({ expenses, onCellPress, anchorDate, categories }: HeatmapViewProps) => {
@@ -448,59 +294,41 @@ const FinancialHeatMapScreen = () => {
   const [view, setView] = useState<'YEAR' | 'MONTH'>('YEAR');
   const [categories, setCategories] = useState<HeatmapCategory[]>([]);
   const [isColorSettingsVisible, setIsColorSettingsVisible] = useState(false);
-  const [draftCategories, setDraftCategories] = useState<HeatmapCategory[]>([]);
   const [anchorDate, setAnchorDate] = useState(() => new Date('2025-01-15'));
   const [isDateFilterVisible, setIsDateFilterVisible] = useState(false);
   const [draftAnchorDate, setDraftAnchorDate] = useState(() => new Date('2025-01-15'));
+
+  const [safeLimit, setSafeLimit] = useState(DEFAULT_SAFE_LIMIT);
+  const [dangerLimit, setDangerLimit] = useState(DEFAULT_DANGER_LIMIT);
+  const [draftSafeLimit, setDraftSafeLimit] = useState(DEFAULT_SAFE_LIMIT);
+  const [draftDangerLimit, setDraftDangerLimit] = useState(DEFAULT_DANGER_LIMIT);
 
   useEffect(() => {
     const loadSavedColors = async () => {
       try {
         const user = auth.currentUser;
-        if (!user) return;
-
-        const snap = await getDoc(doc(db1, 'users', user.uid));
-        if (!snap.exists()) return;
-
-        const data = snap.data() as any;
-        const normalizedCategories = normalizeCategories(data?.heatmapCategories);
-        if (normalizedCategories) {
-          setCategories(normalizedCategories);
+        if (!user) {
+          setSafeLimit(DEFAULT_SAFE_LIMIT);
+          setDangerLimit(DEFAULT_DANGER_LIMIT);
+          setCategories(buildFixedCategories(DEFAULT_SAFE_LIMIT, DEFAULT_DANGER_LIMIT));
           return;
         }
 
-        const legacyColors = normalizeLegacyColors(data?.heatmapColors);
-        const legacyLabels = normalizeLegacyLabels(data?.heatmapLabels);
-        const legacyThresholds = normalizeLegacyThresholds(data?.heatmapThresholds);
-        const legacyExtraCats = normalizeLegacyExtraCategories(data?.heatmapExtraCategories);
-
-        if (legacyColors && legacyLabels && legacyThresholds) {
-          const safe = Math.min(legacyThresholds.safeLimit, legacyThresholds.dangerLimit);
-          const danger = Math.max(legacyThresholds.safeLimit, legacyThresholds.dangerLimit);
-
-          const migrated: HeatmapCategory[] = [
-            { id: generateId(), type: 'EMPTY', label: legacyLabels.empty, color: legacyColors.empty },
-            { id: generateId(), type: 'RANGE', label: legacyLabels.safe, color: legacyColors.safe, min: 0, max: safe },
-            { id: generateId(), type: 'RANGE', label: legacyLabels.warning, color: legacyColors.warning, min: safe, max: danger },
-          ];
-
-          if (legacyExtraCats && legacyExtraCats.length > 0) {
-            const sorted = [...legacyExtraCats].sort((a, b) => a.limit - b.limit);
-            migrated.push(
-              ...sorted.map<HeatmapCategory>((c) => ({
-                id: generateId(),
-                type: 'RANGE',
-                label: c.label,
-                color: c.color,
-                min: danger,
-                max: c.limit,
-              }))
-            );
-          }
-
-          migrated.push({ id: generateId(), type: 'RANGE', label: legacyLabels.danger, color: legacyColors.danger, min: danger, max: null });
-          setCategories(migrated);
+        const snap = await getDoc(doc(db1, 'users', user.uid));
+        if (!snap.exists()) {
+          setSafeLimit(DEFAULT_SAFE_LIMIT);
+          setDangerLimit(DEFAULT_DANGER_LIMIT);
+          setCategories(buildFixedCategories(DEFAULT_SAFE_LIMIT, DEFAULT_DANGER_LIMIT));
+          return;
         }
+
+        const data = snap.data() as any;
+        const thresholds = normalizeLegacyThresholds(data?.heatmapThresholds);
+        const safe = thresholds?.safeLimit ?? DEFAULT_SAFE_LIMIT;
+        const danger = thresholds?.dangerLimit ?? DEFAULT_DANGER_LIMIT;
+        setSafeLimit(safe);
+        setDangerLimit(danger);
+        setCategories(buildFixedCategories(safe, danger));
       } catch (err) {
         console.error(err);
       }
@@ -512,7 +340,7 @@ const FinancialHeatMapScreen = () => {
   const handleCellPress = (date: Date | null, amount: number | null) => {
     if (!date) return;
     const dateString = format(date, 'MMMM do, yyyy');
-    const amountString = amount !== null ? `$${amount.toFixed(2)}` : 'No spending';
+    const amountString = amount !== null ? `₹${amount.toFixed(2)}` : 'No spending';
     const resolved = resolveCategoryForAmount(amount, categories);
     const categoryLabel = resolved?.label ?? 'Uncategorized';
     Alert.alert('Spending Details', `${dateString}\n${amountString}\n${categoryLabel}`);
@@ -531,21 +359,17 @@ const FinancialHeatMapScreen = () => {
 
   const viewDetailsText = useMemo(() => {
     if (view === 'YEAR') {
-      return '2025';
+      return format(anchorDate, 'yyyy');
     }
     return format(anchorDate, 'MMMM yyyy');
   }, [anchorDate, view]);
 
   const shiftAnchorDate = (direction: -1 | 1) => {
     if (view !== 'MONTH') return;
-    setAnchorDate((prev) => {
-      const nextMonth = (prev.getMonth() + direction + 12) % 12;
-      return new Date(2025, nextMonth, 15);
-    });
+    setAnchorDate((prev) => addMonths(prev, direction));
   };
 
   const openDateFilter = () => {
-    if (view !== 'MONTH') return;
     setDraftAnchorDate(anchorDate);
     setIsDateFilterVisible(true);
   };
@@ -555,12 +379,13 @@ const FinancialHeatMapScreen = () => {
   };
 
   const saveDateFilter = () => {
-    setAnchorDate(new Date(2025, draftAnchorDate.getMonth(), 15));
+    setAnchorDate(new Date(draftAnchorDate.getFullYear(), draftAnchorDate.getMonth(), 15));
     setIsDateFilterVisible(false);
   };
 
   const openColorSettings = () => {
-    setDraftCategories(categories);
+    setDraftSafeLimit(safeLimit);
+    setDraftDangerLimit(dangerLimit);
     setIsColorSettingsVisible(true);
   };
 
@@ -568,56 +393,28 @@ const FinancialHeatMapScreen = () => {
     setIsColorSettingsVisible(false);
   };
 
-  const addDraftRangeCategory = () => {
-    setDraftCategories((prev) => [
-      ...prev,
-      { id: generateId(), type: 'RANGE', label: 'New Category', color: EXTRA_CATEGORY_COLOR_PRESETS[0], min: 0, max: null },
-    ]);
+  const resetDraftRanges = () => {
+    setDraftSafeLimit(DEFAULT_SAFE_LIMIT);
+    setDraftDangerLimit(DEFAULT_DANGER_LIMIT);
   };
 
-  const addDraftEmptyCategory = () => {
-    setDraftCategories((prev) => {
-      const hasEmpty = prev.some((c) => c.type === 'EMPTY');
-      if (hasEmpty) return prev;
-      return [...prev, { id: generateId(), type: 'EMPTY', label: 'No Spending', color: NEUTRAL_EMPTY_COLOR }];
+  const adjustDraftSafe = (delta: number) => {
+    setDraftSafeLimit((prev) => {
+      const next = Math.max(0, prev + delta);
+      setDraftDangerLimit((dPrev) => Math.max(next, dPrev));
+      return next;
     });
   };
 
-  const removeDraftCategory = (id: string) => {
-    setDraftCategories((prev) => prev.filter((c) => c.id !== id));
-  };
-
-  const updateDraftCategoryLabel = (id: string, label: string) => {
-    setDraftCategories((prev) => prev.map((c) => (c.id === id ? { ...c, label } : c)));
-  };
-
-  const updateDraftCategoryMin = (id: string, value: string) => {
-    const parsed = Number(value);
-    setDraftCategories((prev) =>
-      prev.map((c) => {
-        if (c.id !== id || c.type !== 'RANGE') return c;
-        return { ...c, min: Number.isFinite(parsed) ? Math.max(0, parsed) : 0 };
-      })
-    );
-  };
-
-  const updateDraftCategoryMax = (id: string, value: string) => {
-    const parsed = Number(value);
-    setDraftCategories((prev) =>
-      prev.map((c) => {
-        if (c.id !== id || c.type !== 'RANGE') return c;
-        if (value.trim() === '') return { ...c, max: null };
-        return { ...c, max: Number.isFinite(parsed) ? Math.max(c.min, parsed) : c.max };
-      })
-    );
-  };
-
-  const updateDraftCategoryColor = (id: string, color: string) => {
-    setDraftCategories((prev) => prev.map((c) => (c.id === id ? { ...c, color } : c)));
+  const adjustDraftDanger = (delta: number) => {
+    setDraftDangerLimit((prev) => Math.max(draftSafeLimit, prev + delta));
   };
 
   const saveColorSettings = async () => {
-    setCategories(draftCategories);
+    setSafeLimit(draftSafeLimit);
+    setDangerLimit(draftDangerLimit);
+    const nextCategories = buildFixedCategories(draftSafeLimit, draftDangerLimit);
+    setCategories(nextCategories);
     setIsColorSettingsVisible(false);
 
     try {
@@ -626,7 +423,11 @@ const FinancialHeatMapScreen = () => {
       await setDoc(
         doc(db1, 'users', user.uid),
         {
-          heatmapCategories: draftCategories,
+          heatmapThresholds: {
+            safeLimit: draftSafeLimit,
+            dangerLimit: draftDangerLimit,
+          },
+          heatmapCategories: nextCategories,
         },
         { merge: true }
       );
@@ -657,9 +458,10 @@ const FinancialHeatMapScreen = () => {
               </TouchableOpacity>
             </>
           ) : (
-            <View style={styles.filterSinglePill}>
+            <TouchableOpacity style={styles.filterCenterBtn} onPress={openDateFilter}>
               <Text style={styles.filterCenterText}>{viewDetailsText}</Text>
-            </View>
+              <Feather name="chevron-down" size={18} color={PRIMARY} />
+            </TouchableOpacity>
           )}
         </View>
         <ScrollView style={styles.contentScrollView} keyboardShouldPersistTaps="handled">
@@ -683,29 +485,51 @@ const FinancialHeatMapScreen = () => {
                 </TouchableOpacity>
               </View>
 
-              {view === 'MONTH' && (
-                <View>
-                  <View style={styles.monthHeaderRow}>
-                    <View style={styles.monthHeaderSpacer} />
-                    <Text style={styles.monthHeaderText}>2025</Text>
-                    <View style={styles.monthHeaderSpacer} />
-                  </View>
-                  <View style={styles.monthGridPicker}>
-                    {Array.from({ length: 12 }, (_, i) => i).map((m) => {
-                      const isActive = m === draftAnchorDate.getMonth();
+              <ScrollView
+                style={styles.modalBody}
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="always"
+              >
+                <View style={styles.filterSection}>
+                  <Text style={styles.filterSectionTitle}>Year</Text>
+                  <View style={styles.yearChipRow}>
+                    {[2025].map((y) => {
+                      const isActive = y === draftAnchorDate.getFullYear();
                       return (
                         <TouchableOpacity
-                          key={m}
-                          style={[styles.monthChip, isActive ? styles.monthChipActive : null]}
-                          onPress={() => setDraftAnchorDate(new Date(2025, m, 15))}
+                          key={y}
+                          style={[styles.yearChip, isActive ? styles.yearChipActive : null]}
+                          onPress={() => setDraftAnchorDate(new Date(y, draftAnchorDate.getMonth(), 15))}
                         >
-                          <Text style={[styles.monthChipText, isActive ? styles.monthChipTextActive : null]}>{format(new Date(2025, m, 1), 'MMM')}</Text>
+                          <Text style={[styles.yearChipText, isActive ? styles.yearChipTextActive : null]}>{y}</Text>
                         </TouchableOpacity>
                       );
                     })}
                   </View>
                 </View>
-              )}
+
+                {view === 'MONTH' && (
+                  <View style={styles.filterSection}>
+                    <Text style={styles.filterSectionTitle}>Month</Text>
+                    <View style={styles.monthGridPicker}>
+                      {Array.from({ length: 12 }, (_, i) => i).map((m) => {
+                        const isActive = m === draftAnchorDate.getMonth();
+                        return (
+                          <TouchableOpacity
+                            key={m}
+                            style={[styles.monthChip, isActive ? styles.monthChipActive : null]}
+                            onPress={() => setDraftAnchorDate(new Date(draftAnchorDate.getFullYear(), m, 15))}
+                          >
+                            <Text style={[styles.monthChipText, isActive ? styles.monthChipTextActive : null]}>
+                              {format(new Date(2025, m, 1), 'MMM')}
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  </View>
+                )}
+              </ScrollView>
 
               <View style={styles.modalActions}>
                 <TouchableOpacity
@@ -736,9 +560,6 @@ const FinancialHeatMapScreen = () => {
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>Heatmap Categories</Text>
                 <View style={styles.modalHeaderActions}>
-                  <TouchableOpacity style={styles.modalIconBtn} onPress={addDraftRangeCategory}>
-                    <Feather name="plus" size={20} color={PRIMARY} />
-                  </TouchableOpacity>
                   <TouchableOpacity style={styles.modalIconBtn} onPress={closeColorSettings}>
                     <Feather name="x" size={22} color={PRIMARY} />
                   </TouchableOpacity>
@@ -750,32 +571,53 @@ const FinancialHeatMapScreen = () => {
                 showsVerticalScrollIndicator={false}
                 keyboardShouldPersistTaps="always"
               >
-                <View style={styles.tagsCard}>
-                  <Text style={styles.tagsTitle}>Your Categories</Text>
 
-                  {draftCategories.length === 0 ? (
-                    <Text style={styles.tagsEmptyText}>No categories yet. Add at least one range category to see colors on the heatmap.</Text>
-                  ) : (
-                    draftCategories.map((cat) => (
-                      <ExtraCategoryRow
-                        key={cat.id}
-                        category={cat}
-                        onChangeLabel={updateDraftCategoryLabel}
-                        onChangeMin={updateDraftCategoryMin}
-                        onChangeMax={updateDraftCategoryMax}
-                        onChangeColor={updateDraftCategoryColor}
-                        onRemove={removeDraftCategory}
-                      />
-                    ))
-                  )}
+                <Text style={styles.defaultsHintText}>
+                  Default limits: Safe ₹{DEFAULT_SAFE_LIMIT} • Danger ₹{DEFAULT_DANGER_LIMIT}
+                </Text>
 
-                  <View style={styles.addCategoryRow}>
-                    <TouchableOpacity style={styles.addCategorySecondaryBtn} onPress={addDraftEmptyCategory}>
-                      <Text style={styles.addCategorySecondaryText}>Add No-Spending</Text>
+                <View style={styles.stepperRow}>
+                  <Text style={styles.stepperLabel}>Safe limit</Text>
+                  <View style={styles.stepperControls}>
+                    <TouchableOpacity style={styles.stepperBtn} onPress={() => adjustDraftSafe(-THRESHOLD_STEP)}>
+                      <Feather name="minus" size={16} color={PRIMARY} />
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.addTagButton} onPress={addDraftRangeCategory}>
-                      <Text style={styles.addTagButtonText}>Add Range</Text>
+                    <Text style={styles.stepperValue}>₹{draftSafeLimit}</Text>
+                    <TouchableOpacity style={styles.stepperBtn} onPress={() => adjustDraftSafe(THRESHOLD_STEP)}>
+                      <Feather name="plus" size={16} color={PRIMARY} />
                     </TouchableOpacity>
+                  </View>
+                </View>
+
+                <View style={styles.stepperRow}>
+                  <Text style={styles.stepperLabel}>Danger limit</Text>
+                  <View style={styles.stepperControls}>
+                    <TouchableOpacity style={styles.stepperBtn} onPress={() => adjustDraftDanger(-THRESHOLD_STEP)}>
+                      <Feather name="minus" size={16} color={PRIMARY} />
+                    </TouchableOpacity>
+                    <Text style={styles.stepperValue}>₹{draftDangerLimit}</Text>
+                    <TouchableOpacity style={styles.stepperBtn} onPress={() => adjustDraftDanger(THRESHOLD_STEP)}>
+                      <Feather name="plus" size={16} color={PRIMARY} />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                <View style={styles.fixedLegendCard}>
+                  <View style={styles.fixedLegendRow}>
+                    <View style={[styles.fixedLegendDot, { backgroundColor: FIXED_EMPTY_COLOR }]} />
+                    <Text style={styles.fixedLegendText}>{FIXED_EMPTY_LABEL}</Text>
+                  </View>
+                  <View style={styles.fixedLegendRow}>
+                    <View style={[styles.fixedLegendDot, { backgroundColor: FIXED_SAFE_COLOR }]} />
+                    <Text style={styles.fixedLegendText}>{FIXED_SAFE_LABEL}</Text>
+                  </View>
+                  <View style={styles.fixedLegendRow}>
+                    <View style={[styles.fixedLegendDot, { backgroundColor: FIXED_WARNING_COLOR }]} />
+                    <Text style={styles.fixedLegendText}>{FIXED_WARNING_LABEL}</Text>
+                  </View>
+                  <View style={styles.fixedLegendRow}>
+                    <View style={[styles.fixedLegendDot, { backgroundColor: FIXED_DANGER_COLOR }]} />
+                    <Text style={styles.fixedLegendText}>{FIXED_DANGER_LABEL}</Text>
                   </View>
                 </View>
               </ScrollView>
@@ -783,13 +625,10 @@ const FinancialHeatMapScreen = () => {
               <View style={styles.modalActions}>
                 <TouchableOpacity
                   style={[styles.modalButton, styles.modalButtonSecondary]}
-                  onPress={() => {
-                    setDraftCategories([]);
-                  }}
+                  onPress={resetDraftRanges}
                 >
                   <Text style={styles.modalButtonSecondaryText}>Reset</Text>
                 </TouchableOpacity>
-
                 <View style={styles.modalActionsRight}>
                   <TouchableOpacity
                     style={[styles.modalButton, styles.modalButtonSecondary]}
@@ -908,6 +747,32 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 14,
     elevation: 3,
+  },
+  yearMonthsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  yearMonthCard: {
+    width: '31.5%',
+    backgroundColor: '#F7F8FC',
+    borderRadius: 14,
+    padding: 10,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.06)',
+  },
+  yearMonthTitle: {
+    fontSize: 12,
+    fontWeight: '900',
+    color: PRIMARY,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  yearMiniGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
   },
   yearGrid: {
     flexDirection: 'row',
@@ -1031,6 +896,39 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 10,
   },
+  filterSection: {
+    marginBottom: 14,
+  },
+  filterSectionTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: PRIMARY,
+    marginBottom: 10,
+  },
+  yearChipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  yearChip: {
+    width: '48%',
+    paddingVertical: 10,
+    marginBottom: 10,
+    borderRadius: 14,
+    backgroundColor: '#F7F8FC',
+    alignItems: 'center',
+  },
+  yearChipActive: {
+    backgroundColor: '#EAF0FF',
+  },
+  yearChipText: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: 'rgba(0,0,0,0.7)',
+  },
+  yearChipTextActive: {
+    color: PRIMARY,
+  },
   modalActionsRight: {
     flexDirection: 'row',
   },
@@ -1115,6 +1013,162 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: 'rgba(0,0,0,0.55)',
   },
+  categoryIntroCard: {
+    backgroundColor: '#F7F8FC',
+    borderRadius: 14,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.06)',
+    marginTop: 6,
+    marginBottom: 12,
+  },
+  categoryIntroTitle: {
+    fontSize: 14,
+    fontWeight: '900',
+    color: PRIMARY,
+    marginBottom: 6,
+  },
+  categoryIntroText: {
+    fontSize: 12,
+    color: 'rgba(0,0,0,0.6)',
+    lineHeight: 16,
+  },
+  primaryActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: PRIMARY,
+    borderRadius: 14,
+    paddingVertical: 12,
+    marginBottom: 12,
+  },
+  primaryActionBtnText: {
+    color: '#fff',
+    fontWeight: '900',
+    marginLeft: 8,
+  },
+  emptyToggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#fff',
+    borderRadius: 14,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.06)',
+    marginBottom: 14,
+  },
+  emptyToggleTextCol: {
+    flex: 1,
+    marginRight: 12,
+  },
+  emptyToggleTitle: {
+    fontSize: 13,
+    fontWeight: '900',
+    color: PRIMARY,
+    marginBottom: 2,
+  },
+  emptyToggleSubtitle: {
+    fontSize: 12,
+    color: 'rgba(0,0,0,0.55)',
+  },
+  togglePill: {
+    minWidth: 64,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+  },
+  togglePillOn: {
+    backgroundColor: '#EAF0FF',
+    borderColor: 'rgba(31,48,94,0.25)',
+  },
+  togglePillOff: {
+    backgroundColor: '#F7F8FC',
+    borderColor: 'rgba(0,0,0,0.08)',
+  },
+  togglePillText: {
+    fontWeight: '900',
+    color: 'rgba(0,0,0,0.65)',
+  },
+  togglePillTextOn: {
+    color: PRIMARY,
+  },
+  categorySectionTitle: {
+    fontSize: 13,
+    fontWeight: '900',
+    color: PRIMARY,
+    marginBottom: 10,
+  },
+  stepperRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#fff',
+    borderRadius: 14,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.06)',
+    marginBottom: 10,
+  },
+  stepperLabel: {
+    fontSize: 13,
+    fontWeight: '900',
+    color: PRIMARY,
+  },
+  stepperControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  stepperBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: '#F7F8FC',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.08)',
+  },
+  stepperValue: {
+    minWidth: 74,
+    textAlign: 'center',
+    fontWeight: '900',
+    color: PRIMARY,
+  },
+  fixedLegendCard: {
+    backgroundColor: '#F7F8FC',
+    borderRadius: 14,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.06)',
+    marginTop: 6,
+  },
+  fixedLegendRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  fixedLegendDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 4,
+    marginRight: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.08)',
+  },
+  fixedLegendText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: PRIMARY,
+  },
+  defaultsHintText: {
+    fontSize: 12,
+    color: 'rgba(0,0,0,0.55)',
+    marginBottom: 10,
+  },
   addTagButton: {
     marginLeft: 10,
     backgroundColor: PRIMARY,
@@ -1160,17 +1214,24 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 10,
   },
-  extraCategoryLabelInput: {
+  extraCategoryTitleRow: {
     flex: 1,
-    backgroundColor: '#F7F8FC',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  extraCategoryColorDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 4,
+    marginRight: 8,
     borderWidth: 1,
     borderColor: 'rgba(0,0,0,0.08)',
-    fontWeight: '800',
+  },
+  extraCategoryTitleText: {
+    flex: 1,
+    fontWeight: '900',
     color: PRIMARY,
-    marginRight: 10,
   },
   extraCategoryRemoveBtn: {
     width: 38,
@@ -1190,9 +1251,6 @@ const styles = StyleSheet.create({
   },
   extraCategoryRangeField: {
     flex: 1,
-  },
-  extraCategoryColorRow: {
-    paddingTop: 2,
   },
   thresholdLabel: {
     fontSize: 13,

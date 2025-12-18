@@ -114,7 +114,7 @@ export default function HomeScreen() {
 const [fabModalVisible, setFabModalVisible] = useState(false);
   return (
     <SafeAreaView style={styles.container}>
-      {/* 🔵 TOP SECTION */}
+      {/* TOP SECTION */}
       <View style={styles.topSection}>
         <View style={styles.header}>
           <TouchableOpacity onPress={openMenu}>
@@ -133,7 +133,7 @@ const [fabModalVisible, setFabModalVisible] = useState(false);
         </View>
       </View>
 
-      {/* ⚪ CONTENT */}
+      {/* CONTENT */}
       <View style={styles.content}>
         {/* Income & Expense */}
         <View style={styles.row}>
@@ -148,7 +148,7 @@ const [fabModalVisible, setFabModalVisible] = useState(false);
           </View>
         </View>
 
-        {/* 📊 CHART */}
+        {/* CHART */}
         <View style={styles.chartCard}>
           <Text style={styles.chartTitle}>This Month Spending</Text>
 
@@ -166,7 +166,7 @@ const [fabModalVisible, setFabModalVisible] = useState(false);
           />
         </View>
 
-        {/* 💳 BUDGET */}
+        {/* BUDGET */}
         <View style={styles.budgetCard}>
           <Text style={styles.budgetTitle}>Monthly Budget</Text>
 
@@ -188,13 +188,13 @@ const [fabModalVisible, setFabModalVisible] = useState(false);
         </View>
       </View>
 
-      {/* ➕ ADD EXPENSE */}
+      {/* ADD EXPENSE */}
       <TouchableOpacity style={styles.fab} onPress={() => setFabModalVisible(true)} >
         <Ionicons name="add" size={28} color="#fff" />
       </TouchableOpacity>
       <ExpenseFabModal visible={fabModalVisible} onClose={() => setFabModalVisible(false)} />
 
-      {/* 🌫 BLUR OVERLAY */}
+      {/* BLUR OVERLAY */}
 {menuOpen && (
   <TouchableOpacity
     style={StyleSheet.absoluteFill}
@@ -209,7 +209,7 @@ const [fabModalVisible, setFabModalVisible] = useState(false);
   </TouchableOpacity>
 )}
 
-{/* 📂 SLIDING SIDE MENU */}
+{/* SLIDING SIDE MENU */}
 <Animated.View
   style={[
     styles.sideMenu,
@@ -218,7 +218,14 @@ const [fabModalVisible, setFabModalVisible] = useState(false);
 >
   <Text style={styles.menuTitle}>Spenzia</Text>
 
-  <MenuItem icon="pulse-outline" label="Expense Heatmap" />
+  <MenuItem
+    icon="pulse-outline"
+    label="Expense Heatmap"
+    onPress={() => {
+      closeMenu();
+      router.push('/(tabs)/FinancialHeatMapScreen');
+    }}
+  />
   <MenuItem icon="list-outline" label="Recent Transactions" />
   <MenuItem icon="folder-outline" label="Category Manager" />
   <MenuItem icon="wallet-outline" label="Savings Goal" />
@@ -232,9 +239,9 @@ const [fabModalVisible, setFabModalVisible] = useState(false);
   );
 }
 
-function MenuItem({ icon, label }: any) {
+function MenuItem({ icon, label, onPress }: any) {
   return (
-    <TouchableOpacity style={styles.menuItem}>
+    <TouchableOpacity style={styles.menuItem} onPress={onPress}>
       <Ionicons name={icon} size={20} color="#444" />
       <Text style={styles.menuText}>{label}</Text>
     </TouchableOpacity>

@@ -228,10 +228,7 @@ const [fabModalVisible, setFabModalVisible] = useState(false);
   />
   <MenuItem icon="list-outline" label="Recent Transactions" 
   onPress={() => {closeMenu(); router.push('../(auth)/RecentTransaction')} }/>
-  <MenuItem icon="folder-outline" label="Category Manager" />
-  <MenuItem icon="wallet-outline" label="Savings Goal" 
-     />
-  <MenuItem icon="list-outline" label="Recent Transactions" />
+  
   <MenuItem
     icon="folder-outline"
     label="Category Manager"

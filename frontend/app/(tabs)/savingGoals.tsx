@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { auth, db1 } from "../../firebase";
+import { onAuthStateChanged } from "firebase/auth";
 import {
   collection,
   addDoc,
@@ -32,7 +33,15 @@ export default function SavingGoals() {
   const [amount, setAmount] = useState("");
   const [goals, setGoals] = useState<Goal[]>([]);
 
-  const user = auth.currentUser;
+  const [user, setUser] = useState(auth.currentUser);
+
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (firebaseUser) => {
+      setUser(firebaseUser);
+    });
+
+    return unsub;
+  }, []);
 
   useEffect(() => {
     if (!user) return;
@@ -51,13 +60,14 @@ export default function SavingGoals() {
     });
 
     return unsub;
-  }, []);
+  }, [user?.uid]);
 
   const addGoal = async () => {
     if (!goalName || !amount) return;
+    if (!user) return;
 
     await addDoc(
-      collection(db1, "users", user!.uid, "savingGoals"),
+      collection(db1, "users", user.uid, "savingGoals"),
       {
         name: goalName,
         targetAmount: Number(amount),

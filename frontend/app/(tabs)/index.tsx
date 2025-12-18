@@ -231,6 +231,23 @@ const [fabModalVisible, setFabModalVisible] = useState(false);
   <MenuItem icon="folder-outline" label="Category Manager" />
   <MenuItem icon="wallet-outline" label="Savings Goal" 
      />
+  <MenuItem icon="list-outline" label="Recent Transactions" />
+  <MenuItem
+    icon="folder-outline"
+    label="Category Manager"
+    onPress={() => {
+      closeMenu();
+      router.push('/(tabs)/CategoryManager');
+    }}
+  />
+  <MenuItem
+    icon="wallet-outline"
+    label="Savings Goal"
+    onPress={() => {
+      closeMenu();
+      router.push('/savingGoals');
+    }}
+  />
   <MenuItem icon="stats-chart-outline" label="Monthly Reports" />
   <MenuItem icon="trending-up-outline" label="Spending Insights" /> 
   <MenuItem icon="alert-circle-outline" label="Alerts" />

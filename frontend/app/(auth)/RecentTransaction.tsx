@@ -101,25 +101,12 @@ const RecentTransactions = () => {
 
       {/* HEADER */}
       <View style={styles.header}>
-        {/* LEFT ARROW */}
-  <TouchableOpacity
-    style={styles.headerButton}
-    onPress={() => navigation.goBack()}
-  >
-    <Feather name="arrow-left" size={22} color="#FFFFFF" />
-  </TouchableOpacity>
+       
 
   {/* CENTER TITLE */}
   <Text style={styles.headerTitle}>Transaction History</Text>
 
-  {/* RIGHT REFRESH */}
-  <TouchableOpacity
-    style={styles.headerButton}
-    onPress={handleRefresh}
-    disabled={refreshing}
-  >
-    <Feather name="refresh-cw" size={22} color="#FFFFFF" />
-  </TouchableOpacity>
+  
         
       </View>
 

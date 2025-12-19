@@ -76,20 +76,20 @@ const RecentTransactions = () => {
 
   const getCategoryColor = (category: string) => {
     const colors: Record<string, string> = {
-      Food: '#4FACFE',
-      Transport: '#FFC107',
-      Shopping: '#EF5777',
-      Other: '#26D0CE',
-      Income: '#4FACFE',
+      Food: '#2C3E7C',
+      Transport: '#2C3E7C',
+      Shopping: '#2C3E7C',
+      Other: '#2C3E7C',
+      Income: '#2C3E7C',
     };
-    return colors[category] || '#4FACFE';
+    return colors[category] || '#2C3E7C';
   };
 
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <StatusBar barStyle="light-content" backgroundColor="#4FACFE" />
-        <ActivityIndicator size="large" color="#FFFFFF" />
+        <StatusBar barStyle="dark-content" backgroundColor="#F5F1E8" />
+        <ActivityIndicator size="large" color="#2C3E7C" />
         <Text style={styles.loadingText}>Loading transactions...</Text>
       </View>
     );
@@ -97,17 +97,18 @@ const RecentTransactions = () => {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#4FACFE" />
+      <StatusBar barStyle="dark-content" backgroundColor="#F5F1E8" />
 
       {/* HEADER */}
       <View style={styles.header}>
-       
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+        >
+          <Feather name="arrow-left" size={24} color="#2C3E7C" />
+        </TouchableOpacity>
 
-  {/* CENTER TITLE */}
-  <Text style={styles.headerTitle}>Transaction History</Text>
-
-  
-        
+        <Text style={styles.headerTitle}>Transaction History</Text>
       </View>
 
       {/* CONTENT */}
@@ -118,7 +119,7 @@ const RecentTransactions = () => {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={handleRefresh}
-            colors={['#4FACFE']}
+            colors={['#2C3E7C']}
           />
         }
       >
@@ -168,16 +169,7 @@ const RecentTransactions = () => {
 
                   <View style={styles.transactionCard}>
                     <View style={styles.transactionContent}>
-                      <View
-                        style={[
-                          styles.iconContainer,
-                          {
-                            backgroundColor: `${getCategoryColor(
-                              transaction.category
-                            )}20`,
-                          },
-                        ]}
-                      >
+                      <View style={styles.iconContainer}>
                         <Feather
                           name={
                             transaction.type === 'income'
@@ -185,7 +177,7 @@ const RecentTransactions = () => {
                               : 'trending-down'
                           }
                           size={24}
-                          color={getCategoryColor(transaction.category)}
+                          color="#2C3E7C"
                         />
                       </View>
 
@@ -233,82 +225,90 @@ export default RecentTransactions;
 /* ---------------- STYLES ---------------- */
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#5B8DEF' },
+  container: { 
+    flex: 1, 
+    backgroundColor: '#F5F1E8' 
+  },
 
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#5B8DEF',
+    backgroundColor: '#F5F1E8',
   },
 
   loadingText: {
     marginTop: 16,
-    color: '#FFFFFF',
+    color: '#2C3E7C',
     fontSize: 16,
     fontWeight: '500',
   },
 
   header: {
-    height: 130,
-    flexDirection: 'row',
-    alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 40
+    paddingTop: 40,
+    paddingBottom: 30,
   },
 
-  headerButton: {
-    width: 40,
-    height: 70,
+  backButton: {
+    width: 48,
+    height: 48,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
 
   headerTitle: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    textAlign: 'center',
-    color: '#FFFFFF',
-    fontSize: 24,
-    fontWeight: '600',
-    paddingTop: 20
-  },
+  fontSize: 34,
+  fontWeight: '900',
+  color: '#1F305E',
+  letterSpacing: 0.2,
+},
 
   content: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    backgroundColor: '#F5F1E8',
   },
 
   contentContainer: {
     paddingHorizontal: 20,
-    paddingTop: 24,
+    paddingTop: 10,
     paddingBottom: 80,
   },
 
   filterContainer: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 12,
     marginBottom: 24,
   },
 
   filterTab: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 20,
-    backgroundColor: '#F5F5F5',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 24,
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
   },
 
   filterTabActive: {
-    backgroundColor: '#5B8DEF',
+    backgroundColor: '#5B8EF5',
   },
 
   filterText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#666',
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#2C3E7C',
   },
 
   filterTextActive: {
@@ -316,30 +316,37 @@ const styles = StyleSheet.create({
   },
 
   transactionList: {
-    gap: 12,
+    gap: 16,
   },
 
   emptyContainer: {
-    paddingVertical: 48,
+    paddingVertical: 60,
     alignItems: 'center',
   },
 
   emptyText: {
-    color: '#CCC',
+    color: '#A0A0A0',
     fontSize: 16,
+    fontWeight: '500',
   },
 
   dateHeader: {
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '600',
     color: '#666',
-    marginVertical: 8,
+    marginBottom: 12,
+    marginTop: 8,
   },
 
   transactionCard: {
-    backgroundColor: '#F5F5F5',
-    borderRadius: 16,
-    padding: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 18,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 3,
   },
 
   transactionContent: {
@@ -349,9 +356,10 @@ const styles = StyleSheet.create({
   },
 
   iconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    backgroundColor: '#E8EFFF',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -361,15 +369,16 @@ const styles = StyleSheet.create({
   },
 
   transactionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#2C3E7C',
+    marginBottom: 4,
   },
 
   timeText: {
-    fontSize: 12,
-    color: '#999',
-    marginTop: 4,
+    fontSize: 13,
+    color: '#8E8E93',
+    fontWeight: '500',
   },
 
   amountText: {
@@ -378,10 +387,10 @@ const styles = StyleSheet.create({
   },
 
   incomeAmount: {
-    color: '#10B981',
+    color: '#34C759',
   },
 
   expenseAmount: {
-    color: '#EF4444',
+    color: '#FF3B30',
   },
 });

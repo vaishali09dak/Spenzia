@@ -246,7 +246,8 @@ const [fabModalVisible, setFabModalVisible] = useState(false);
     }}
   />
   <MenuItem icon="stats-chart-outline" label="Monthly Reports" />
-  <MenuItem icon="trending-up-outline" label="Spending Insights" /> 
+  <MenuItem icon="trending-up-outline" label="Spending Insights"
+  onPress={() => {closeMenu(); router.push('../(auth)/SpendingInsights')} } /> 
   <MenuItem icon="alert-circle-outline" label="Alerts" />
 
 </Animated.View>

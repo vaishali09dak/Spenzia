@@ -8,6 +8,8 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { db1 } from "../../firebase";
 
 const { width, height } = Dimensions.get('window');
 
@@ -25,8 +27,40 @@ export default function SignUpScreen() {
     
     setLoading(true);
     try {
-      await createUserWithEmailAndPassword(auth, email, password);
-      router.replace("/(auth)/userdetails");
+      const handleSignUp = async () => {
+  if (password !== confirmPassword) {
+    Alert.alert("Error", "Passwords do not match");
+    return;
+  }
+
+  setLoading(true);
+  try {
+    const userCredential = await createUserWithEmailAndPassword(
+      auth,
+      email,
+      password
+    );
+
+    const uid = userCredential.user.uid;
+
+    // ✅ CREATE USER DOCUMENT IN FIRESTORE
+    await setDoc(
+      doc(db1, "users", uid),
+      {
+        email,
+        balance: 0,               // 👈 INITIAL BALANCE
+        createdAt: serverTimestamp(),
+      },
+      { merge: true }
+    );
+
+    router.replace("/(auth)/userdetails");
+  } catch (error: any) {
+    Alert.alert("Sign Up Failed", error.message);
+  } finally {
+    setLoading(false);
+  }
+};
 
 
     } catch (error: any) {

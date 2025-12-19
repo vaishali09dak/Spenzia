@@ -302,13 +302,13 @@ const styles = StyleSheet.create({
   },
 
   filterTabActive: {
-    backgroundColor: '#5B8EF5',
+    backgroundColor: '#1F305E',
   },
 
   filterText: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#2C3E7C',
+    color: '#1F305E',
   },
 
   filterTextActive: {

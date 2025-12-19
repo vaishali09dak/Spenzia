@@ -11,12 +11,20 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { auth, db1 } from "../../firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import {
+  doc,
+  updateDoc,
+  getDoc,
   collection,
   addDoc,
   onSnapshot,
   query,
   orderBy,
 } from "firebase/firestore";
+import { Alert } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { router } from "expo-router";
+
+
 
 const PRIMARY = "#1F305E";
 const BG = "#FFF9F2";
@@ -32,8 +40,11 @@ export default function SavingGoals() {
   const [goalName, setGoalName] = useState("");
   const [amount, setAmount] = useState("");
   const [goals, setGoals] = useState<Goal[]>([]);
-
+  const [addAmounts, setAddAmounts] = useState<{ [key: string]: string }>({});
   const [user, setUser] = useState(auth.currentUser);
+  const getTotalSaved = () => {
+  return goals.reduce((sum, goal) => sum + goal.savedAmount, 0);
+};
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (firebaseUser) => {
@@ -80,16 +91,77 @@ export default function SavingGoals() {
     setAmount("");
   };
 
+  const addMoneyToGoal = async (goal: Goal) => {
+  if (!user) return;
+
+  const amountStr = addAmounts[goal.id];
+  if (!amountStr) return;
+
+  const amountToAdd = Number(amountStr);
+  if (amountToAdd <= 0) return;
+
+  try {
+    const userRef = doc(db1, "users", user.uid);
+    const userSnap = await getDoc(userRef);
+
+    if (!userSnap.exists()) return;
+
+    const monthlyIncome = Number(userSnap.data().monthlyIncome || 0);
+    const monthlyBudget = Number(userSnap.data().monthlyBudget || 0);
+
+    const totalSaved = getTotalSaved();
+    const availableToSave =
+      monthlyIncome - monthlyBudget - totalSaved;
+
+    if (availableToSave < amountToAdd) {
+      Alert.alert(
+        "Insufficient balance",
+        `Available to save: ₹${availableToSave}`
+      );
+      return;
+    }
+
+    const goalRef = doc(
+      db1,
+      "users",
+      user.uid,
+      "savingGoals",
+      goal.id
+    );
+
+    await updateDoc(goalRef, {
+      savedAmount: goal.savedAmount + amountToAdd,
+    });
+
+    setAddAmounts((prev) => ({
+      ...prev,
+      [goal.id]: "",
+    }));
+  } catch (err) {
+    console.log(err);
+  }
+};
+
   return (
+    
     <SafeAreaView style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
+
+        <View style={styles.header}>
+  <TouchableOpacity onPress={() => router.back()}>
+    <Ionicons name="arrow-back" size={24} color={PRIMARY} />
+  </TouchableOpacity>
+</View>
+
+
         <Text style={styles.title}>Saving Goals</Text>
-        <Text style={styles.subtitle}>
+        {/* <Text style={styles.subtitle}>
           Plan today. Relax tomorrow.
-        </Text>
+        </Text> */}
 
         {/* ADD GOAL */}
-        <View style={styles.card}>
+        <View style={[styles.card, styles.cardShadow]}>
+
           <TextInput
             placeholder="Goal name (e.g. Trip to Goa)"
             style={styles.input}
@@ -111,28 +183,58 @@ export default function SavingGoals() {
         </View>
 
         {/* GOALS LIST */}
-        {goals.map((goal) => {
-          const progress =
-            goal.savedAmount / goal.targetAmount;
+{goals.map((goal) => {
+  const progress =
+    goal.savedAmount / goal.targetAmount;
 
-          return (
-            <View key={goal.id} style={styles.goalCard}>
-              <Text style={styles.goalName}>{goal.name}</Text>
-              <Text style={styles.amountText}>
-                ₹{goal.savedAmount} / ₹{goal.targetAmount}
-              </Text>
+  return (
+    <View key={goal.id} style={[styles.goalCard, styles.cardShadow]}>
 
-              <View style={styles.progressBar}>
-                <View
-                  style={[
-                    styles.progressFill,
-                    { width: `${progress * 100}%` },
-                  ]}
-                />
-              </View>
-            </View>
-          );
-        })}
+      <Text style={styles.goalName}>{goal.name}</Text>
+
+      <Text style={styles.amountText}>
+        ₹{goal.savedAmount} / ₹{goal.targetAmount}
+      </Text>
+
+      <View style={styles.progressBar}>
+        <View
+          style={[
+            styles.progressFill,
+            {
+              width: `${Math.min(progress * 100, 100)}%`,
+            },
+          ]}
+        />
+      </View>
+
+      {/* ADD MONEY INPUT */}
+      <View style={styles.addMoneyRow}>
+  <TextInput
+    placeholder="₹ Amount"
+    style={styles.addMoneyInput}
+    keyboardType="numeric"
+    value={addAmounts[goal.id] || ""}
+onChangeText={(text) =>
+  setAddAmounts((prev) => ({
+    ...prev,
+    [goal.id]: text,
+  }))
+}
+
+  />
+
+  <TouchableOpacity
+    style={styles.addMoneyBtn}
+    onPress={() => addMoneyToGoal(goal)}
+  >
+    <Ionicons name="add" size={22} color="#fff" />
+  </TouchableOpacity>
+</View>
+
+    </View>
+  );
+})}
+
       </ScrollView>
     </SafeAreaView>
   );
@@ -145,13 +247,12 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   title: {
-    fontSize: 28,
-    fontWeight: "700",
-    color: PRIMARY,
-  },
-  subtitle: {
-    color: "#666",
-    marginBottom: 20,
+    marginTop: 10,
+    fontSize: 34,
+    fontWeight: '900',
+    color: '#1F305E',
+    letterSpacing: 0.2,
+    marginBottom: 30,
   },
   card: {
     backgroundColor: "#fff",
@@ -200,4 +301,44 @@ const styles = StyleSheet.create({
     backgroundColor: PRIMARY,
     borderRadius: 8,
   },
+  addMoneyRow: {
+  flexDirection: "row",
+  alignItems: "center",
+  marginTop: 12,
+},
+
+addMoneyInput: {
+  flex: 1,
+  backgroundColor: "#F2F2F2",
+  borderRadius: 10,
+  paddingVertical: 10,
+  paddingHorizontal: 12,
+  marginRight: 10,
+},
+
+addMoneyBtn: {
+  backgroundColor: PRIMARY,
+  width: 42,
+  height: 42,
+  borderRadius: 21,
+  alignItems: "center",
+  justifyContent: "center",
+},
+header: {
+  flexDirection: "row",
+  alignItems: "center",
+  marginBottom: 10,
+},
+cardShadow: {
+  // iOS shadow
+  shadowColor: "#000",
+  shadowOffset: { width: 0, height: 4 },
+  shadowOpacity: 0.12,
+  shadowRadius: 8,
+
+  // Android shadow
+  elevation: 6,
+},
+
+
 });

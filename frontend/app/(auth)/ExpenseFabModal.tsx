@@ -20,6 +20,83 @@ interface Props {
   onClose: () => void;
 }
 
+type Category = {
+  name: string;
+  color: string;
+};
+
+const AmountInput: React.FC<{ amountRef: React.MutableRefObject<string> }> = ({ amountRef }) => (
+  <View style={styles.inputContainer}>
+    <Text style={styles.label}>Amount</Text>
+    <View style={styles.amountInputWrapper}>
+      <Text style={styles.currencySymbol}>₹</Text>
+      <TextInput
+        placeholder="0.00"
+        placeholderTextColor="#999"
+        keyboardType="number-pad"
+        defaultValue={amountRef.current}
+        onChangeText={(text) => (amountRef.current = text)}
+        style={styles.amountInput}
+      />
+    </View>
+  </View>
+);
+
+const CategorySection: React.FC<{
+  categories: Category[];
+  selectedCategory: string;
+  setSelectedCategory: React.Dispatch<React.SetStateAction<string>>;
+}> = ({ categories, selectedCategory, setSelectedCategory }) => (
+  <View style={styles.section}>
+    <Text style={styles.label}>Select Category</Text>
+    <View style={styles.categoryGrid}>
+      {categories.map((cat) => (
+        <TouchableOpacity
+          key={cat.name}
+          style={[
+            styles.categoryChip,
+            selectedCategory === cat.name && {
+              backgroundColor: cat.color,
+              borderColor: cat.color,
+            },
+          ]}
+          onPress={() => setSelectedCategory(cat.name)}
+        >
+          <Text
+            style={[
+              styles.categoryChipText,
+              selectedCategory === cat.name && styles.categoryChipTextSelected,
+            ]}
+          >
+            {cat.name}
+          </Text>
+        </TouchableOpacity>
+      ))}
+    </View>
+  </View>
+);
+
+const NoteInput: React.FC<{
+  note: string;
+  setNote: React.Dispatch<React.SetStateAction<string>>;
+}> = ({ note, setNote }) => (
+  <View style={styles.inputContainer}>
+    <Text style={styles.label}>Note (Optional)</Text>
+
+    <TextInput
+      placeholder="Add a note..."
+      placeholderTextColor="#999"
+      value={note}
+      onChangeText={setNote}
+      style={[styles.input, styles.noteInput]}
+      multiline
+      numberOfLines={3}
+      blurOnSubmit={false}
+      scrollEnabled={false}
+    />
+  </View>
+);
+
 const INITIAL_CATEGORIES = [
   { name: 'Food', color: '#64B5F6' },
   { name: 'Transport', color: '#FFB74D' },
@@ -37,13 +114,8 @@ const ExpenseFabModal: React.FC<Props> = ({ visible, onClose }) => {
   const [selectedCategory, setSelectedCategory] = useState('');
   const [note, setNote] = useState('');
 
-  const [scrollEnabled, setScrollEnabled] = useState(true);
-
   // 🔥 FIX: amount via ref (uncontrolled input)
   const amountRef = useRef('');
-
-  const noteInputRef = useRef<TextInput>(null);
-
 
   const openForm = (type: ModalType) => setModalType(type);
 
@@ -97,112 +169,44 @@ const ExpenseFabModal: React.FC<Props> = ({ visible, onClose }) => {
     closeForm();
   };
 
-  const AmountInput = () => (
-    <View style={styles.inputContainer}>
-      <Text style={styles.label}>Amount</Text>
-      <View style={styles.amountInputWrapper}>
-        <Text style={styles.currencySymbol}>₹</Text>
-        <TextInput
-          placeholder="0.00"
-          placeholderTextColor="#999"
-          keyboardType="number-pad"
-          defaultValue={amountRef.current}
-          onChangeText={(text) => (amountRef.current = text)}
-          style={styles.amountInput}
-        />
-      </View>
-    </View>
-  );
-
-  const CategorySection = () => (
-    <View style={styles.section}>
-      <Text style={styles.label}>Select Category</Text>
-      <View style={styles.categoryGrid}>
-        {categories.map(cat => (
-          <TouchableOpacity
-            key={cat.name}
-            style={[
-              styles.categoryChip,
-              selectedCategory === cat.name && {
-                backgroundColor: cat.color,
-                borderColor: cat.color,
-              },
-            ]}
-            onPress={() => setSelectedCategory(cat.name)}
-          >
-            <Text
-              style={[
-                styles.categoryChipText,
-                selectedCategory === cat.name && styles.categoryChipTextSelected,
-              ]}
-            >
-              {cat.name}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-    </View>
-  );
-
-  const NoteInput = () => (
-  <View style={styles.inputContainer}>
-    <Text style={styles.label}>Note (Optional)</Text>
-
-    <TextInput
-      placeholder="Add a note..."
-      placeholderTextColor="#999"
-      value={note}
-      onChangeText={setNote}
-      style={[styles.input, styles.noteInput]}
-      multiline
-      numberOfLines={3}
-      blurOnSubmit={false}
-      scrollEnabled={false}
-    />
-  </View>
-);
-
-
-
   return (
     <Modal
       visible={visible}
       animationType={Platform.OS === 'ios' ? 'slide' : 'none'}
       transparent
-
     >
       <View style={[styles.overlay, !modalType && styles.overlayCentered]}>
         <View style={[styles.modal, !modalType && styles.modalCentered]}>
           <View style={styles.modalHandle} />
 
           {!modalType && (
-              <View style={styles.fabContainer}>
-                <Text style={styles.fabTitle}>What would you like to do?</Text>
-                <View style={styles.fabButtons}>
-                  <TouchableOpacity 
-                    style={styles.fabWrapper}
-                    onPress={() => openForm('income')}
-                    activeOpacity={0.8}
-                  >
-                    <View style={[styles.fab, { backgroundColor: '#10B981' }]}>
-                      <Text style={styles.fabText}>💵</Text>
-                    </View>
-                    <Text style={styles.fabLabel}>Income</Text>
-                  </TouchableOpacity>
+            <View style={styles.fabContainer}>
+              <Text style={styles.fabTitle}>What would you like to do?</Text>
+              <View style={styles.fabButtons}>
+                <TouchableOpacity
+                  style={styles.fabWrapper}
+                  onPress={() => openForm('income')}
+                  activeOpacity={0.8}
+                >
+                  <View style={[styles.fab, { backgroundColor: '#10B981' }]}>
+                    <Text style={styles.fabText}>💵</Text>
+                  </View>
+                  <Text style={styles.fabLabel}>Income</Text>
+                </TouchableOpacity>
 
-                  <TouchableOpacity 
-                    style={styles.fabWrapper}
-                    onPress={() => openForm('expense')}
-                    activeOpacity={0.8}
-                  >
-                    <View style={[styles.fab, { backgroundColor: '#EF4444' }]}>
-                      <Text style={styles.fabText}>💳</Text>
-                    </View>
-                    <Text style={styles.fabLabel}>Expense</Text>
-                  </TouchableOpacity>
-                </View>
+                <TouchableOpacity
+                  style={styles.fabWrapper}
+                  onPress={() => openForm('expense')}
+                  activeOpacity={0.8}
+                >
+                  <View style={[styles.fab, { backgroundColor: '#EF4444' }]}>
+                    <Text style={styles.fabText}>💳</Text>
+                  </View>
+                  <Text style={styles.fabLabel}>Expense</Text>
+                </TouchableOpacity>
               </View>
-            )}
+            </View>
+          )}
 
           {modalType && (
             <ScrollView
@@ -210,11 +214,14 @@ const ExpenseFabModal: React.FC<Props> = ({ visible, onClose }) => {
               keyboardDismissMode="none"
               showsVerticalScrollIndicator={false}
               contentContainerStyle={styles.scrollContent}
-              
             >
-              <AmountInput />
-              <CategorySection />
-              <NoteInput />
+              <AmountInput amountRef={amountRef} />
+              <CategorySection
+                categories={categories}
+                selectedCategory={selectedCategory}
+                setSelectedCategory={setSelectedCategory}
+              />
+              <NoteInput note={note} setNote={setNote} />
 
               <TouchableOpacity
                 style={[

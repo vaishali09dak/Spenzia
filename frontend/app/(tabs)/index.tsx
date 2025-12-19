@@ -18,7 +18,7 @@ import { BlurView } from "expo-blur";
 import ExpenseFabModal from '../(auth)/ExpenseFabModal';
 
 const { height, width } = Dimensions.get("window");
-const MENU_WIDTH = width * 0.75;
+const MENU_WIDTH = width * 0.70;
 
 export default function HomeScreen() {
 

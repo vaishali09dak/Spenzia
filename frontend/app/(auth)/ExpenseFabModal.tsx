@@ -181,7 +181,7 @@ const ExpenseFabModal: React.FC<Props> = ({ visible, onClose }) => {
 
           {!modalType && (
             <View style={styles.fabContainer}>
-              <Text style={styles.fabTitle}>What would you like to do?</Text>
+              <Text style={styles.fabTitle}>What would you like to add?</Text>
               <View style={styles.fabButtons}>
                 <TouchableOpacity
                   style={styles.fabWrapper}

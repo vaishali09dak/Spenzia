@@ -14,6 +14,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { PieChart } from "react-native-chart-kit";
 import { router } from "expo-router";
 import { BlurView } from "expo-blur";
+import { collection, onSnapshot, query, where } from "firebase/firestore";
+
 
 import ExpenseFabModal from '../(auth)/ExpenseFabModal';
 
@@ -53,62 +55,76 @@ export default function HomeScreen() {
   const remaining = budget - expenses;
   const progress = budget > 0 ? expenses / budget : 0;
 
+  const CATEGORY_COLORS: Record<string, string> = {
+  food: "#376118ff",
+  travel: "#FFB703",
+  shopping: "#bd284aff",
+  utilities: "#220b41ff",
+  rent: "#115d76ff",
+  entertainment: "#104657ff",
+  education: "#ffd166",
+  health: "#5a143eff",
+  bills: "#9a031eff",
+  transport: "#fb5607ff",
+  other: "#0b172dff",
+};
+
+
   useEffect(() => {
-  const fetchUserFinance = async () => {
-    try {
-      const user = auth.currentUser;
-      if (!user) return;
+  const user = auth.currentUser;
+  if (!user) return;
 
-      const userRef = doc(db1, "users", user.uid);
-      const userSnap = await getDoc(userRef);
-
-      if (userSnap.exists()) {
-        const data = userSnap.data();
-
-        setIncome(data.monthlyIncome || 0);
-        setBudget(data.monthlyBudget || 0);
-      }
-
-      // TEMP expenses (replace later with transactions sum)
-      setExpenses(2770);
-
-      // TEMP category breakdown
-      setExpenseData([
-        {
-          name: "Food",
-          amount: 1200,
-          color: "#5B8DEF",
-          legendFontColor: "#555",
-          legendFontSize: 12,
-        },
-        {
-          name: "Transport",
-          amount: 600,
-          color: "#FFB703",
-          legendFontColor: "#555",
-          legendFontSize: 12,
-        },
-        {
-          name: "Shopping",
-          amount: 500,
-          color: "#EF476F",
-          legendFontColor: "#555",
-          legendFontSize: 12,
-        },
-        {
-          name: "Other",
-          amount: 470,
-          color: "#06D6A0",
-          legendFontColor: "#555",
-          legendFontSize: 12,
-        },
-      ]);
-    } catch (error) {
-      console.error("Error fetching finance data:", error);
+  // 🔴 Listen to user profile (income/budget)
+  const userUnsub = onSnapshot(
+    doc(db1, "users", user.uid),
+    (snap) => {
+      if (!snap.exists()) return;
+      const data = snap.data();
+      setIncome(data.monthlyIncome || 0);
+      setBudget(data.monthlyBudget || 0);
     }
-  };
+  );
 
-  fetchUserFinance();
+  // 🔴 Listen to transactions in real-time
+  const txQuery = query(
+    collection(db1, "users", user.uid, "transactions"),
+    where("type", "==", "expense")
+  );
+
+  const txUnsub = onSnapshot(txQuery, (snapshot) => {
+    let total = 0;
+    const categoryTotals: Record<string, number> = {};
+
+    snapshot.forEach((doc) => {
+      const data = doc.data();
+      const amount = Number(data.amount) || 0;
+      const category = (data.category || "Other").toLowerCase();
+
+      total += amount;
+      categoryTotals[category] =
+        (categoryTotals[category] || 0) + amount;
+    });
+
+    setExpenses(total);
+
+    const pieData = Object.entries(categoryTotals).map(
+      ([category, amount]) => ({
+        name: category.charAt(0).toUpperCase() + category.slice(1),
+        amount,
+        color: CATEGORY_COLORS[category] || "#CBD5E1",
+        legendFontColor: "#555",
+        legendFontSize: 12,
+      })
+    );
+
+    setExpenseData(pieData);
+  });
+
+  // 🧹 CLEANUP
+  return () => {
+    userUnsub();
+    txUnsub();
+  };
 }, []);
 
 const [fabModalVisible, setFabModalVisible] = useState(false);

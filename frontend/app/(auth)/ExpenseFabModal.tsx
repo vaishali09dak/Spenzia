@@ -10,7 +10,8 @@ import {
   Platform,
 } from 'react-native';
 
-import { doc, setDoc } from 'firebase/firestore';
+import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
+
 import { auth, db1 } from '../../firebase';
 
 type ModalType = 'income' | 'expense' | null;
@@ -136,16 +137,17 @@ const ExpenseFabModal: React.FC<Props> = ({ visible, onClose }) => {
     const user = auth.currentUser;
     if (!user) return;
 
-    await setDoc(
-      doc(db1, 'users', user.uid, 'transactions', Date.now().toString()),
-      {
-        type: 'income',
-        amount: Number(amountRef.current),
-        category: selectedCategory,
-        note,
-        createdAt: new Date(),
-      }
-    );
+    await addDoc(
+  collection(db1, 'users', user.uid, 'transactions'),
+  {
+    type: 'expense',
+    amount: Number(amountRef.current),
+    category: selectedCategory,
+    note,
+    createdAt: serverTimestamp(),
+  }
+);
+
 
     closeForm();
   };
@@ -155,16 +157,16 @@ const ExpenseFabModal: React.FC<Props> = ({ visible, onClose }) => {
     const user = auth.currentUser;
     if (!user) return;
 
-    await setDoc(
-      doc(db1, 'users', user.uid, 'transactions', Date.now().toString()),
-      {
-        type: 'expense',
-        amount: Number(amountRef.current),
-        category: selectedCategory,
-        note,
-        createdAt: new Date(),
-      }
-    );
+    await addDoc(
+  collection(db1, 'users', user.uid, 'transactions'),
+  {
+    type: 'income',
+    amount: Number(amountRef.current),
+    category: selectedCategory,
+    note,
+    createdAt: serverTimestamp(),
+  }
+);
 
     closeForm();
   };
@@ -188,10 +190,10 @@ const ExpenseFabModal: React.FC<Props> = ({ visible, onClose }) => {
                   onPress={() => openForm('income')}
                   activeOpacity={0.8}
                 >
-                  <View style={[styles.fab, { backgroundColor: '#10B981' }]}>
+                  <View style={[styles.fab, { backgroundColor: '#EF4444' }]}>
                     <Text style={styles.fabText}>💵</Text>
                   </View>
-                  <Text style={styles.fabLabel}>Income</Text>
+                  <Text style={styles.fabLabel}>Expense</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
@@ -199,10 +201,10 @@ const ExpenseFabModal: React.FC<Props> = ({ visible, onClose }) => {
                   onPress={() => openForm('expense')}
                   activeOpacity={0.8}
                 >
-                  <View style={[styles.fab, { backgroundColor: '#EF4444' }]}>
+                  <View style={[styles.fab, { backgroundColor: '#10B981' }]}>
                     <Text style={styles.fabText}>💳</Text>
                   </View>
-                  <Text style={styles.fabLabel}>Expense</Text>
+                  <Text style={styles.fabLabel}>Income</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -227,13 +229,13 @@ const ExpenseFabModal: React.FC<Props> = ({ visible, onClose }) => {
                 style={[
                   styles.submitBtn,
                   modalType === 'income'
-                    ? { backgroundColor: '#10B981' }
-                    : { backgroundColor: '#EF4444' },
+                    ? { backgroundColor: '#EF4444' }
+                    : { backgroundColor: '#10B981' },
                 ]}
                 onPress={modalType === 'income' ? submitIncome : submitExpense}
               >
                 <Text style={styles.submitText}>
-                  {modalType === 'income' ? 'Add Income' : 'Add Expense'}
+                  {modalType === 'income' ? 'Add Expense' : 'Add Income'}
                 </Text>
               </TouchableOpacity>
             </ScrollView>

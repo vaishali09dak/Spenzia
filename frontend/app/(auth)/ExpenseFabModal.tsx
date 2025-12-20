@@ -10,7 +10,8 @@ import {
   Platform,
 } from 'react-native';
 
-import { doc, setDoc } from 'firebase/firestore';
+import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
+
 import { auth, db1 } from '../../firebase';
 
 type ModalType = 'income' | 'expense' | null;
@@ -136,16 +137,17 @@ const ExpenseFabModal: React.FC<Props> = ({ visible, onClose }) => {
     const user = auth.currentUser;
     if (!user) return;
 
-    await setDoc(
-      doc(db1, 'users', user.uid, 'transactions', Date.now().toString()),
-      {
-        type: 'income',
-        amount: Number(amountRef.current),
-        category: selectedCategory,
-        note,
-        createdAt: new Date(),
-      }
-    );
+    await addDoc(
+  collection(db1, 'users', user.uid, 'transactions'),
+  {
+    type: 'expense',
+    amount: Number(amountRef.current),
+    category: selectedCategory,
+    note,
+    createdAt: serverTimestamp(),
+  }
+);
+
 
     closeForm();
   };
@@ -155,16 +157,16 @@ const ExpenseFabModal: React.FC<Props> = ({ visible, onClose }) => {
     const user = auth.currentUser;
     if (!user) return;
 
-    await setDoc(
-      doc(db1, 'users', user.uid, 'transactions', Date.now().toString()),
-      {
-        type: 'expense',
-        amount: Number(amountRef.current),
-        category: selectedCategory,
-        note,
-        createdAt: new Date(),
-      }
-    );
+    await addDoc(
+  collection(db1, 'users', user.uid, 'transactions'),
+  {
+    type: 'income',
+    amount: Number(amountRef.current),
+    category: selectedCategory,
+    note,
+    createdAt: serverTimestamp(),
+  }
+);
 
     closeForm();
   };

@@ -183,17 +183,17 @@ const ExpenseFabModal: React.FC<Props> = ({ visible, onClose }) => {
 
           {!modalType && (
             <View style={styles.fabContainer}>
-              <Text style={styles.fabTitle}>What would you like to do?</Text>
+              <Text style={styles.fabTitle}>What would you like to add?</Text>
               <View style={styles.fabButtons}>
                 <TouchableOpacity
                   style={styles.fabWrapper}
                   onPress={() => openForm('income')}
                   activeOpacity={0.8}
                 >
-                  <View style={[styles.fab, { backgroundColor: '#10B981' }]}>
+                  <View style={[styles.fab, { backgroundColor: '#EF4444' }]}>
                     <Text style={styles.fabText}>💵</Text>
                   </View>
-                  <Text style={styles.fabLabel}>Income</Text>
+                  <Text style={styles.fabLabel}>Expense</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
@@ -201,10 +201,10 @@ const ExpenseFabModal: React.FC<Props> = ({ visible, onClose }) => {
                   onPress={() => openForm('expense')}
                   activeOpacity={0.8}
                 >
-                  <View style={[styles.fab, { backgroundColor: '#EF4444' }]}>
+                  <View style={[styles.fab, { backgroundColor: '#10B981' }]}>
                     <Text style={styles.fabText}>💳</Text>
                   </View>
-                  <Text style={styles.fabLabel}>Expense</Text>
+                  <Text style={styles.fabLabel}>Income</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -229,13 +229,13 @@ const ExpenseFabModal: React.FC<Props> = ({ visible, onClose }) => {
                 style={[
                   styles.submitBtn,
                   modalType === 'income'
-                    ? { backgroundColor: '#10B981' }
-                    : { backgroundColor: '#EF4444' },
+                    ? { backgroundColor: '#EF4444' }
+                    : { backgroundColor: '#10B981' },
                 ]}
                 onPress={modalType === 'income' ? submitIncome : submitExpense}
               >
                 <Text style={styles.submitText}>
-                  {modalType === 'income' ? 'Add Income' : 'Add Expense'}
+                  {modalType === 'income' ? 'Add Expense' : 'Add Income'}
                 </Text>
               </TouchableOpacity>
             </ScrollView>

@@ -138,16 +138,15 @@ const ExpenseFabModal: React.FC<Props> = ({ visible, onClose }) => {
     if (!user) return;
 
     await addDoc(
-  collection(db1, 'users', user.uid, 'transactions'),
-  {
-    type: 'expense',
-    amount: Number(amountRef.current),
-    category: selectedCategory,
-    note,
-    createdAt: serverTimestamp(),
-  }
-);
-
+      collection(db1, 'users', user.uid, 'transactions'),
+      {
+        type: 'income',
+        amount: Number(amountRef.current),
+        category: selectedCategory,
+        note,
+        createdAt: serverTimestamp(),
+      }
+    );
 
     closeForm();
   };
@@ -158,15 +157,15 @@ const ExpenseFabModal: React.FC<Props> = ({ visible, onClose }) => {
     if (!user) return;
 
     await addDoc(
-  collection(db1, 'users', user.uid, 'transactions'),
-  {
-    type: 'income',
-    amount: Number(amountRef.current),
-    category: selectedCategory,
-    note,
-    createdAt: serverTimestamp(),
-  }
-);
+      collection(db1, 'users', user.uid, 'transactions'),
+      {
+        type: 'expense',
+        amount: Number(amountRef.current),
+        category: selectedCategory,
+        note,
+        createdAt: serverTimestamp(),
+      }
+    );
 
     closeForm();
   };
@@ -187,7 +186,7 @@ const ExpenseFabModal: React.FC<Props> = ({ visible, onClose }) => {
               <View style={styles.fabButtons}>
                 <TouchableOpacity
                   style={styles.fabWrapper}
-                  onPress={() => openForm('income')}
+                  onPress={() => openForm('expense')}
                   activeOpacity={0.8}
                 >
                   <View style={[styles.fab, { backgroundColor: '#EF4444' }]}>
@@ -198,7 +197,7 @@ const ExpenseFabModal: React.FC<Props> = ({ visible, onClose }) => {
 
                 <TouchableOpacity
                   style={styles.fabWrapper}
-                  onPress={() => openForm('expense')}
+                  onPress={() => openForm('income')}
                   activeOpacity={0.8}
                 >
                   <View style={[styles.fab, { backgroundColor: '#10B981' }]}>
@@ -228,14 +227,14 @@ const ExpenseFabModal: React.FC<Props> = ({ visible, onClose }) => {
               <TouchableOpacity
                 style={[
                   styles.submitBtn,
-                  modalType === 'income'
+                  modalType === 'expense'
                     ? { backgroundColor: '#EF4444' }
                     : { backgroundColor: '#10B981' },
                 ]}
-                onPress={modalType === 'income' ? submitIncome : submitExpense}
+                onPress={modalType === 'expense' ? submitExpense : submitIncome}
               >
                 <Text style={styles.submitText}>
-                  {modalType === 'income' ? 'Add Expense' : 'Add Income'}
+                  {modalType === 'expense' ? 'Add Expense' : 'Add Income'}
                 </Text>
               </TouchableOpacity>
             </ScrollView>

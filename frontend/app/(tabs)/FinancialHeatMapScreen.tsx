@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState, useMemo, Dispatch, SetStateAction } from 'react';
+import React, { useCallback, useEffect, useMemo, useState, Dispatch, SetStateAction } from 'react';
 import {
   View,
   Text,
@@ -7,14 +7,14 @@ import {
   TouchableOpacity,
   ScrollView,
   Dimensions,
-  Alert,
   Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { Ionicons } from '@expo/vector-icons';
 import { eachDayOfInterval, startOfWeek, endOfWeek, addDays, addMonths, format, getDaysInMonth, startOfMonth } from 'date-fns';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { onAuthStateChanged } from 'firebase/auth';
+import { collection, doc, getDoc, onSnapshot, query, setDoc, where } from 'firebase/firestore';
 import { router } from 'expo-router';
 
 import { auth, db1 } from '../../firebase';
@@ -59,9 +59,9 @@ const FIXED_SAFE_COLOR = '#22C55E';
 const FIXED_WARNING_COLOR = '#F59E0B';
 const FIXED_DANGER_COLOR = '#EF4444';
 
-const DEFAULT_SAFE_LIMIT = 50;
-const DEFAULT_DANGER_LIMIT = 150;
-const THRESHOLD_STEP = 10;
+const DEFAULT_SAFE_LIMIT = 500;
+const DEFAULT_DANGER_LIMIT = 1000;
+const THRESHOLD_STEP = 100;
 
 const FIXED_EMPTY_ID = 'no-spending';
 const FIXED_SAFE_ID = 'safe';
@@ -98,16 +98,7 @@ type HeatmapCellData = {
     amount: number | null;
 }
 
-// --- Mock Data ---
-const MOCK_EXPENSES: Expense[] = [
-  { date: '2025-01-15', amount: 75 },
-  { date: '2025-01-22', amount: 150 },
-  { date: '2025-02-10', amount: 30 },
-  { date: '2025-03-05', amount: 200 },
-  { date: '2025-06-18', amount: 120 },
-  { date: '2025-07-01', amount: 50 },
-  { date: '2025-12-25', amount: 300 },
-];
+// --- Data Source ---
 
 const resolveCategoryForAmount = (amount: number | null | undefined, categories: HeatmapCategory[]) => {
   if (amount === null || amount === undefined) {
@@ -135,15 +126,17 @@ type HeaderProps = {
 
 const Header = ({ onPressSettings }: HeaderProps) => (
   <View style={styles.header}>
-    <TouchableOpacity style={styles.headerIconBtn} onPress={() => router.back()}>
-      <Ionicons name="arrow-back" size={22} color={PRIMARY} />
-    </TouchableOpacity>
+    <View style={styles.headerTopRow}>
+      <TouchableOpacity style={styles.headerIconBtn} onPress={() => router.back()}>
+        <Ionicons name="arrow-back" size={22} color={PRIMARY} />
+      </TouchableOpacity>
+
+      <TouchableOpacity style={styles.headerIconBtn} onPress={onPressSettings}>
+        <Feather name="settings" size={24} color={PRIMARY} />
+      </TouchableOpacity>
+    </View>
 
     <Text style={styles.headerTitle}>Expense Heatmap</Text>
-
-    <TouchableOpacity style={styles.headerIconBtn} onPress={onPressSettings}>
-      <Feather name="settings" size={24} color={PRIMARY} />
-    </TouchableOpacity>
   </View>
 );
 
@@ -177,7 +170,8 @@ type HeatmapCellProps = {
     disabled?: boolean;
 }
 
-const HeatmapCell = ({ date, amount, onCellPress, categories, cellSize, cellMargin, showLabel = true, disabled }: HeatmapCellProps) => {
+const HeatmapCell = React.memo(
+  ({ date, amount, onCellPress, categories, cellSize, cellMargin, showLabel = true, disabled }: HeatmapCellProps) => {
     const resolved = resolveCategoryForAmount(amount, categories);
     const isPlaceholder = Boolean(disabled && !date);
     const color =
@@ -185,28 +179,43 @@ const HeatmapCell = ({ date, amount, onCellPress, categories, cellSize, cellMarg
       (amount === null || amount === undefined ? NEUTRAL_EMPTY_COLOR : NEUTRAL_UNCATEGORIZED_COLOR);
 
     const handlePress = () => {
-        onCellPress(date, amount);
-    }
+      onCellPress(date, amount);
+    };
 
-  return (
-    <TouchableOpacity
-      disabled={disabled}
-      onPress={handlePress}
-      style={[
-        styles.cell,
-        cellSize ? { width: cellSize, height: cellSize } : null,
-        cellMargin !== undefined ? { margin: cellMargin } : null,
-        { backgroundColor: color },
-      ]}
-    >
+    return (
+      <TouchableOpacity
+        disabled={disabled}
+        onPress={handlePress}
+        style={[
+          styles.cell,
+          cellSize ? { width: cellSize, height: cellSize } : null,
+          cellMargin !== undefined ? { margin: cellMargin } : null,
+          { backgroundColor: color },
+        ]}
+      >
         <Text style={styles.cellText}>{showLabel && date ? format(date, 'd') : ''}</Text>
-    </TouchableOpacity>
-  );
-};
+      </TouchableOpacity>
+    );
+  },
+  (prev, next) => {
+    const prevTime = prev.date ? prev.date.getTime() : null;
+    const nextTime = next.date ? next.date.getTime() : null;
+    return (
+      prevTime === nextTime &&
+      prev.amount === next.amount &&
+      prev.disabled === next.disabled &&
+      prev.showLabel === next.showLabel &&
+      prev.cellSize === next.cellSize &&
+      prev.cellMargin === next.cellMargin &&
+      prev.categories === next.categories &&
+      prev.onCellPress === next.onCellPress
+    );
+  }
+);
 
 // --- Heatmap Views ---
 type HeatmapViewProps = {
-    expenses: Expense[];
+    expenseByDate: ReadonlyMap<string, number>;
     onCellPress: (date: Date | null, amount: number | null) => void;
     anchorDate: Date;
     categories: HeatmapCategory[];
@@ -214,7 +223,7 @@ type HeatmapViewProps = {
 
 const YEAR_MINI_CELL_SIZE = 8;
 
-const YearView = ({ expenses, onCellPress, anchorDate, categories }: HeatmapViewProps) => {
+const YearView = React.memo(({ expenseByDate, onCellPress, anchorDate, categories }: HeatmapViewProps) => {
   const year = anchorDate.getFullYear();
 
   const monthGrids = useMemo(() => {
@@ -233,8 +242,9 @@ const YearView = ({ expenses, onCellPress, anchorDate, categories }: HeatmapView
         if (day.getFullYear() !== year || day.getMonth() !== monthIndex) {
           return { date: null, amount: null };
         }
-        const expense = expenses.find((e: Expense) => e.date === format(day, 'yyyy-MM-dd'));
-        return { date: day, amount: expense ? expense.amount : null };
+        const key = format(day, 'yyyy-MM-dd');
+        const amount = expenseByDate.get(key);
+        return { date: day, amount: typeof amount === 'number' ? amount : null };
       });
 
       return {
@@ -243,7 +253,7 @@ const YearView = ({ expenses, onCellPress, anchorDate, categories }: HeatmapView
         data,
       };
     });
-  }, [expenses, year]);
+  }, [expenseByDate, year]);
 
   return (
     <View style={styles.yearMonthsGrid}>
@@ -269,42 +279,43 @@ const YearView = ({ expenses, onCellPress, anchorDate, categories }: HeatmapView
       ))}
     </View>
   );
-};
+});
   
 
-const MonthView = ({ expenses, onCellPress, anchorDate, categories }: HeatmapViewProps) => {
-    const monthData: HeatmapCellData[] = useMemo(() => {
-      const today = anchorDate;
-      const monthStart = startOfMonth(today);
-      const monthEnd = addDays(monthStart, getDaysInMonth(today) - 1);
-      
-      const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
-      
-      const leadingPlaceholders = (monthStart.getDay() + 6) % 7;
-      let grid: HeatmapCellData[] = Array.from({ length: leadingPlaceholders }, () => ({ date: null, amount: null }));
-      days.forEach((day: Date) => {
-        const expense = expenses.find((e: Expense) => e.date === format(day, 'yyyy-MM-dd'));
-        grid.push({ date: day, amount: expense ? expense.amount : null });
-      })
-      
-      return grid;
-    }, [anchorDate, expenses]);
-  
-    return (
-      <View style={styles.monthGrid}>
-        {monthData.map(({ date, amount }, index: number) => (
-          <HeatmapCell
-            key={index}
-            date={date}
-            amount={amount}
-            onCellPress={onCellPress}
-            categories={categories}
-            disabled={!date}
-          />
-        ))}
-      </View>
-    );
-  };
+const MonthView = React.memo(({ expenseByDate, onCellPress, anchorDate, categories }: HeatmapViewProps) => {
+  const monthData: HeatmapCellData[] = useMemo(() => {
+    const today = anchorDate;
+    const monthStart = startOfMonth(today);
+    const monthEnd = addDays(monthStart, getDaysInMonth(today) - 1);
+
+    const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
+
+    const leadingPlaceholders = (monthStart.getDay() + 6) % 7;
+    const grid: HeatmapCellData[] = Array.from({ length: leadingPlaceholders }, () => ({ date: null, amount: null }));
+    days.forEach((day: Date) => {
+      const key = format(day, 'yyyy-MM-dd');
+      const amount = expenseByDate.get(key);
+      grid.push({ date: day, amount: typeof amount === 'number' ? amount : null });
+    });
+
+    return grid;
+  }, [anchorDate, expenseByDate]);
+
+  return (
+    <View style={styles.monthGrid}>
+      {monthData.map(({ date, amount }, index: number) => (
+        <HeatmapCell
+          key={index}
+          date={date}
+          amount={amount}
+          onCellPress={onCellPress}
+          categories={categories}
+          disabled={!date}
+        />
+      ))}
+    </View>
+  );
+});
 
 const FinancialHeatMapScreen = () => {
   const MIN_FILTER_YEAR = 2020;
@@ -312,14 +323,72 @@ const FinancialHeatMapScreen = () => {
   const [view, setView] = useState<'YEAR' | 'MONTH'>('YEAR');
   const [categories, setCategories] = useState<HeatmapCategory[]>([]);
   const [isColorSettingsVisible, setIsColorSettingsVisible] = useState(false);
-  const [anchorDate, setAnchorDate] = useState(() => new Date('2025-01-15'));
+  const [anchorDate, setAnchorDate] = useState(() => new Date());
   const [isDateFilterVisible, setIsDateFilterVisible] = useState(false);
-  const [draftAnchorDate, setDraftAnchorDate] = useState(() => new Date('2025-01-15'));
+  const [draftAnchorDate, setDraftAnchorDate] = useState(() => new Date());
+
+  const [user, setUser] = useState(auth.currentUser);
+
+  const [expenseByDate, setExpenseByDate] = useState<ReadonlyMap<string, number>>(() => new Map());
+
+  const [isSpendingDetailsVisible, setIsSpendingDetailsVisible] = useState(false);
+  const [spendingDetails, setSpendingDetails] = useState<{
+    date: Date;
+    amount: number | null;
+    categoryLabel: string;
+    categoryColor: string;
+  } | null>(null);
 
   const [safeLimit, setSafeLimit] = useState(DEFAULT_SAFE_LIMIT);
   const [dangerLimit, setDangerLimit] = useState(DEFAULT_DANGER_LIMIT);
   const [draftSafeLimit, setDraftSafeLimit] = useState(DEFAULT_SAFE_LIMIT);
   const [draftDangerLimit, setDraftDangerLimit] = useState(DEFAULT_DANGER_LIMIT);
+
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (nextUser) => {
+      setUser(nextUser);
+    });
+
+    return unsub;
+  }, []);
+
+  useEffect(() => {
+    if (!user) {
+      setExpenseByDate(new Map());
+      return;
+    }
+
+    const ref = query(collection(db1, 'users', user.uid, 'transactions'), where('type', '==', 'expense'));
+    const unsub = onSnapshot(
+      ref,
+      (snap) => {
+        const map = new Map<string, number>();
+        snap.forEach((d) => {
+          const data = d.data() as any;
+          if (!data) return;
+
+          const amount = Number(data.amount ?? 0);
+          const createdAt = data.createdAt;
+          const date: Date | null = createdAt?.toDate
+            ? createdAt.toDate()
+            : createdAt instanceof Date
+              ? createdAt
+              : null;
+
+          if (!date) return;
+
+          const key = format(date, 'yyyy-MM-dd');
+          map.set(key, (map.get(key) ?? 0) + amount);
+        });
+        setExpenseByDate(map);
+      },
+      (err) => {
+        console.error(err);
+      }
+    );
+
+    return () => unsub();
+  }, [user]);
 
   useEffect(() => {
     const loadSavedColors = async () => {
@@ -342,8 +411,30 @@ const FinancialHeatMapScreen = () => {
 
         const data = snap.data() as any;
         const thresholds = normalizeLegacyThresholds(data?.heatmapThresholds);
-        const safe = thresholds?.safeLimit ?? DEFAULT_SAFE_LIMIT;
-        const danger = thresholds?.dangerLimit ?? DEFAULT_DANGER_LIMIT;
+
+        let safe = thresholds?.safeLimit ?? DEFAULT_SAFE_LIMIT;
+        let danger = thresholds?.dangerLimit ?? DEFAULT_DANGER_LIMIT;
+
+        const isLegacySmall = safe < DEFAULT_SAFE_LIMIT || danger < DEFAULT_DANGER_LIMIT;
+        if (isLegacySmall) {
+          safe = DEFAULT_SAFE_LIMIT;
+          danger = DEFAULT_DANGER_LIMIT;
+          try {
+            await setDoc(
+              doc(db1, 'users', user.uid),
+              {
+                heatmapThresholds: {
+                  safeLimit: safe,
+                  dangerLimit: danger,
+                },
+              },
+              { merge: true }
+            );
+          } catch (err) {
+            console.error(err);
+          }
+        }
+
         setSafeLimit(safe);
         setDangerLimit(danger);
         setCategories(buildFixedCategories(safe, danger));
@@ -355,21 +446,49 @@ const FinancialHeatMapScreen = () => {
     loadSavedColors();
   }, []);
 
-  const handleCellPress = (date: Date | null, amount: number | null) => {
-    if (!date) return;
-    const dateString = format(date, 'MMMM do, yyyy');
-    const amountString = amount !== null ? `₹${amount.toFixed(2)}` : 'No spending';
-    const resolved = resolveCategoryForAmount(amount, categories);
-    const categoryLabel = resolved?.label ?? 'Uncategorized';
-    Alert.alert('Spending Details', `${dateString}\n${amountString}\n${categoryLabel}`);
-  };
+  const closeSpendingDetails = useCallback(() => {
+    setIsSpendingDetailsVisible(false);
+  }, []);
+
+  const handleCellPress = useCallback(
+    (date: Date | null, amount: number | null) => {
+      if (!date) return;
+      const resolved = resolveCategoryForAmount(amount, categories);
+      const categoryLabel = resolved?.label ?? 'Uncategorized';
+      const categoryColor =
+        resolved?.color ?? (amount === null || amount === undefined ? FIXED_EMPTY_COLOR : NEUTRAL_UNCATEGORIZED_COLOR);
+
+      setSpendingDetails({
+        date,
+        amount,
+        categoryLabel,
+        categoryColor,
+      });
+      setIsSpendingDetailsVisible(true);
+    },
+    [categories]
+  );
 
   const renderContent = () => {
     switch (view) {
       case 'YEAR':
-        return <YearView expenses={MOCK_EXPENSES} onCellPress={handleCellPress} anchorDate={anchorDate} categories={categories} />;
+        return (
+          <YearView
+            expenseByDate={expenseByDate}
+            onCellPress={handleCellPress}
+            anchorDate={anchorDate}
+            categories={categories}
+          />
+        );
       case 'MONTH':
-        return <MonthView expenses={MOCK_EXPENSES} onCellPress={handleCellPress} anchorDate={anchorDate} categories={categories} />;
+        return (
+          <MonthView
+            expenseByDate={expenseByDate}
+            onCellPress={handleCellPress}
+            anchorDate={anchorDate}
+            categories={categories}
+          />
+        );
       default:
         return null;
     }
@@ -500,6 +619,60 @@ const FinancialHeatMapScreen = () => {
               {renderContent()}
             </View>
         </ScrollView>
+
+        <Modal
+          transparent
+          animationType="slide"
+          visible={isSpendingDetailsVisible}
+          onRequestClose={closeSpendingDetails}
+        >
+          <TouchableOpacity
+            activeOpacity={1}
+            style={styles.sheetBackdrop}
+            onPress={closeSpendingDetails}
+          >
+            <TouchableOpacity activeOpacity={1} style={styles.sheetCard}>
+              <View style={styles.sheetHandle} />
+              <View style={styles.sheetHeaderRow}>
+                <Text style={styles.sheetTitle}>Spending Details</Text>
+                <TouchableOpacity style={styles.sheetCloseBtn} onPress={closeSpendingDetails}>
+                  <Feather name="x" size={20} color={PRIMARY} />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.sheetBody}>
+                <View style={styles.sheetRow}>
+                  <Text style={styles.sheetLabel}>Date</Text>
+                  <Text style={styles.sheetValue}>
+                    {spendingDetails?.date ? format(spendingDetails.date, 'MMMM do, yyyy') : ''}
+                  </Text>
+                </View>
+
+                <View style={styles.sheetRow}>
+                  <Text style={styles.sheetLabel}>Amount</Text>
+                  <Text style={styles.sheetAmountValue}>
+                    {spendingDetails?.amount !== null && spendingDetails?.amount !== undefined
+                      ? `₹${spendingDetails.amount.toFixed(2)}`
+                      : 'No spending'}
+                  </Text>
+                </View>
+
+                <View style={styles.sheetRow}>
+                  <Text style={styles.sheetLabel}>Category</Text>
+                  <View style={styles.sheetCategoryPill}>
+                    <View
+                      style={[
+                        styles.sheetCategoryDot,
+                        { backgroundColor: spendingDetails?.categoryColor ?? NEUTRAL_UNCATEGORIZED_COLOR },
+                      ]}
+                    />
+                    <Text style={styles.sheetCategoryText}>{spendingDetails?.categoryLabel ?? ''}</Text>
+                  </View>
+                </View>
+              </View>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </Modal>
 
         <Modal
           transparent
@@ -697,10 +870,14 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   header: {
+    paddingTop: 6,
+    marginBottom: 20,
+  },
+  headerTopRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 6,
   },
   headerIconBtn: {
     width: 44,
@@ -712,13 +889,12 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   headerTitle: {
-    flex: 1,
-    textAlign: 'center',
     marginTop: 10,
     fontSize: 34,
     fontWeight: '900',
     color: '#1F305E',
     letterSpacing: 0.2,
+    textAlign: 'left',
   },
   tabContainer: {
     flexDirection: 'row',
@@ -794,6 +970,90 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 14,
     elevation: 3,
+  },
+  sheetBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'flex-end',
+  },
+  sheetCard: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 22,
+    paddingHorizontal: 18,
+    paddingTop: 10,
+    paddingBottom: 22,
+  },
+  sheetHandle: {
+    width: 44,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#E5E7EB',
+    alignSelf: 'center',
+    marginBottom: 12,
+  },
+  sheetHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  sheetTitle: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: PRIMARY,
+  },
+  sheetCloseBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sheetBody: {
+    gap: 12,
+  },
+  sheetRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  sheetLabel: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#6B7280',
+  },
+  sheetValue: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#111827',
+  },
+  sheetAmountValue: {
+    fontSize: 16,
+    fontWeight: '900',
+    color: '#111827',
+  },
+  sheetCategoryPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  sheetCategoryDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    marginRight: 8,
+  },
+  sheetCategoryText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#111827',
   },
   yearMonthsGrid: {
     flexDirection: 'row',

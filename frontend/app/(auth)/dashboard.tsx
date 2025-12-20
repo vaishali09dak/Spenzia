@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
-
+import BackgroundDecor from "@/components/BackgroundDecor";
 import {
   View,
   Text,
@@ -63,6 +63,7 @@ export default function DashboardScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* <BackgroundDecor /> */}
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* 🔵 PROFILE HEADER SECTION */}
         <View style={styles.profileHeader}>
@@ -189,10 +190,10 @@ const styles = StyleSheet.create({
   },
 
   profileHeader: {
-    backgroundColor: "#5B8DEF",
+    backgroundColor: "#213c74",
     paddingHorizontal: 20,
     paddingTop: 16,
-    paddingBottom: 40,
+    paddingBottom: 30,
     borderBottomLeftRadius: 32,
     borderBottomRightRadius: 32,
   },
@@ -217,7 +218,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginBottom: 12,
     borderWidth: 3,
-    borderColor: "#FFB6C1",
+    borderColor: "#EAF0FF",
   },
 
   userName: {
@@ -234,9 +235,8 @@ const styles = StyleSheet.create({
   },
 
   content: {
-    flex: 1,
-    padding: 20,
-    marginTop: -20,
+  padding: 20,
+  marginTop: -40, // closer to homepage feel
   },
 
   section: {
@@ -247,27 +247,27 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginTop: 8, 
+    marginTop: 20, 
     marginBottom: 8
   },
 
   sectionTitle: {
     fontSize: 20,
     fontWeight: "700",
-    color: "#1E3A5F",
-    marginTop: 12
+    color: "#213c74",
+    marginTop: 14
   },
 
   detailsCard: {
-    backgroundColor: "#fff",
-    borderRadius: 20,
-    padding: 16,
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    marginBottom: -15
+  backgroundColor: "#fff",
+  borderRadius: 20,
+  padding: 16,
+  elevation: 4,
+  shadowColor: "#000",
+  shadowOffset: { width: 0, height: 4 },
+  shadowOpacity: 0.08,
+  shadowRadius: 8,
+  marginBottom: -30
   },
 
   detailItem: {
@@ -304,7 +304,7 @@ const styles = StyleSheet.create({
   detailValue: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#333",
+    color: "#1F2937",
   },
 
   financialCard: {

@@ -227,7 +227,7 @@ export default RecentTransactions;
 const styles = StyleSheet.create({
   container: { 
     flex: 1, 
-    backgroundColor: '#F5F1E8' 
+    backgroundColor: '#FFF9F2' 
   },
 
   loadingContainer: {

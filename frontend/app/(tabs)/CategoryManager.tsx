@@ -74,6 +74,8 @@ const DEFAULT_CATEGORIES: Category[] = [
   { id: 'Shopping', name: 'Shopping' },
   { id: 'Utilities', name: 'Utilities' },
   { id: 'Rent', name: 'Rent' },
+  { id: 'Health', name: 'Health' },
+  { id: 'Education', name: 'Education' },
   { id: 'Entertainment', name: 'Entertainment' },
   { id: 'Other', name: 'Other', isOther: true },
   // { id: 'Other', name: 'Other', isOther: true },
@@ -109,7 +111,10 @@ export default function CategoryManager() {
       snap.forEach((d) => {
         const data = d.data() as any;
         if (!data?.name) return;
-        const name = String(data.name);
+        let name = String(data.name);
+        const normalized = name.trim().toLowerCase();
+        if (normalized === 'transport') name = 'Travel';
+        if (normalized === 'bills') name = 'Utilities';
         if (name.toLowerCase() === 'other') return;
         remote.push({
           id: d.id,

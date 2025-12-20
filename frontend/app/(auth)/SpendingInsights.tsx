@@ -15,9 +15,27 @@ import { collection, query, orderBy, getDocs, where } from 'firebase/firestore';
 import { useNavigation } from '@react-navigation/native';
 import { auth, db1 } from '../../firebase';
 
-
 const { width } = Dimensions.get('window');
 type FeatherIconName = React.ComponentProps<typeof Feather>['name'];
+
+const normalizeCategoryLabel = (raw: any) => {
+  const s = String(raw ?? '').trim();
+  if (!s) return 'Other';
+  const key = s.toLowerCase();
+  if (key === 'transport') return 'Travel';
+  if (key === 'bills') return 'Utilities';
+  if (key === 'utilities') return 'Utilities';
+  if (key === 'travel') return 'Travel';
+  if (key === 'food') return 'Food';
+  if (key === 'shopping') return 'Shopping';
+  if (key === 'rent') return 'Rent';
+  if (key === 'health') return 'Health';
+  if (key === 'education') return 'Education';
+  if (key === 'entertainment') return 'Entertainment';
+  if (key === 'other') return 'Other';
+
+  return s.charAt(0).toUpperCase() + s.slice(1);
+};
 
 const SpendingInsights = () => {
   const navigation = useNavigation();
@@ -83,12 +101,13 @@ const SpendingInsights = () => {
     const categoryMap: Record<string, { total: number; count: number; transactions: any[] }> = {};
 
     filtered.forEach(t => {
-      if (!categoryMap[t.category]) {
-        categoryMap[t.category] = { total: 0, count: 0, transactions: [] };
+      const category = normalizeCategoryLabel(t.category);
+      if (!categoryMap[category]) {
+        categoryMap[category] = { total: 0, count: 0, transactions: [] };
       }
-      categoryMap[t.category].total += t.amount;
-      categoryMap[t.category].count += 1;
-      categoryMap[t.category].transactions.push(t);
+      categoryMap[category].total += t.amount;
+      categoryMap[category].count += 1;
+      categoryMap[category].transactions.push(t);
     });
 
     return Object.entries(categoryMap)
@@ -139,19 +158,18 @@ const SpendingInsights = () => {
   const getCategoryIcon = (category: string): FeatherIconName => {
   const icons: Record<string, FeatherIconName> = {
     Food: 'coffee',
-    Transport: 'truck',
+    Travel: 'map',
     Shopping: 'shopping-bag',
     Utilities: 'zap',
     Rent: 'home',
     Entertainment: 'film',
-    Gift: 'gift',
-    Medicine: 'heart',
+    Education: 'book-open',
+    Health: 'heart',
     Other: 'more-horizontal',
   };
 
-  return icons[category] ?? 'more-horizontal';
+  return icons[normalizeCategoryLabel(category)] ?? 'more-horizontal';
 };
-
 
   if (loading) {
     return (
@@ -246,14 +264,14 @@ const SpendingInsights = () => {
               <View style={styles.highlightHeader}>
                 <View style={styles.highlightIconContainer}>
                   <Feather
-                    name={getCategoryIcon(highestTransaction.category)}
+                    name={getCategoryIcon(normalizeCategoryLabel(highestTransaction.category))}
                     size={28}
                     color="#2C3E7C"
                   />
                 </View>
                 <View style={styles.highlightInfo}>
                   <Text style={styles.highlightCategory}>
-                    {highestTransaction.category}
+                    {normalizeCategoryLabel(highestTransaction.category)}
                   </Text>
                   <Text style={styles.highlightAmount}>
                     {formatCurrency(highestTransaction.amount)}

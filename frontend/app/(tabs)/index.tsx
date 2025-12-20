@@ -408,7 +408,7 @@ const styles = StyleSheet.create({
   top: 0,
   bottom: 0,
   width: MENU_WIDTH,
-  backgroundColor: "#f0e3e9ff",
+  backgroundColor: "#f2f8fbff",
   paddingTop: 60,
   paddingHorizontal: 20,
   elevation: 12,

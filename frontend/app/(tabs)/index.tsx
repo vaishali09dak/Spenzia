@@ -15,8 +15,7 @@ import { PieChart } from "react-native-chart-kit";
 import { router } from "expo-router";
 import { BlurView } from "expo-blur";
 import { collection, onSnapshot, query, where } from "firebase/firestore";
-
-
+import BackgroundDecor from "@/components/BackgroundDecor";
 import ExpenseFabModal from '../(auth)/ExpenseFabModal';
 
 const { height, width } = Dimensions.get("window");
@@ -56,17 +55,17 @@ export default function HomeScreen() {
   const progress = budget > 0 ? expenses / budget : 0;
 
   const CATEGORY_COLORS: Record<string, string> = {
-  food: "#376118ff",
-  travel: "#FFB703",
-  shopping: "#bd284aff",
-  utilities: "#220b41ff",
-  rent: "#115d76ff",
-  entertainment: "#104657ff",
-  education: "#ffd166",
-  health: "#5a143eff",
-  bills: "#9a031eff",
-  transport: "#fb5607ff",
-  other: "#0b172dff",
+  food: "#B9FBC0",          
+  travel: "#D0F4DE",        
+  shopping: "#FFB5A7",     
+  utilities: "#FAF1D6",    
+  rent: "#A2D2FF",         
+  entertainment: "#FFD1BA", 
+  education: "#FFC8DD",    
+  health: "#BDE0FE",     
+  bills: "#CDB4DB",      
+  transport: "#7dbfc0ff",   
+  other: "#c4d2ebff",     
 };
 
 
@@ -128,10 +127,13 @@ export default function HomeScreen() {
 }, []);
 
 const [fabModalVisible, setFabModalVisible] = useState(false);
-  return (
+
+return (
     <SafeAreaView style={styles.container}>
+       {/* <BackgroundDecor /> */}
+
       {/* TOP SECTION */}
-      <View style={styles.topSection}>
+      <View style={styles.topSection} >
         <View style={styles.header}>
           <TouchableOpacity onPress={openMenu}>
             <Ionicons name="menu" size={26} color="#fff" />
@@ -174,7 +176,7 @@ const [fabModalVisible, setFabModalVisible] = useState(false);
             height={180}
             accessor="amount"
             backgroundColor="transparent"
-            paddingLeft="15"
+            paddingLeft="-2"
             absolute
             chartConfig={{
               color: () => "#000",
@@ -213,17 +215,21 @@ const [fabModalVisible, setFabModalVisible] = useState(false);
       {/* BLUR OVERLAY */}
 {menuOpen && (
   <TouchableOpacity
-    style={StyleSheet.absoluteFill}
     activeOpacity={1}
     onPress={closeMenu}
+    style={[
+      StyleSheet.absoluteFillObject,
+      { zIndex: 15 },
+    ]}
   >
     <BlurView
-      intensity={40}
+      intensity={30}
       tint="light"
       style={StyleSheet.absoluteFillObject}
     />
   </TouchableOpacity>
 )}
+
 
 {/* SLIDING SIDE MENU */}
 <Animated.View
@@ -289,15 +295,17 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#FFF9F2",
+    position: "relative",
   },
 
   topSection: {
-    height: height * 0.32,
-    backgroundColor: "#5B8DEF",
+    height: height * 0.30,
+    backgroundColor: "#213c74ff",
     borderBottomLeftRadius: 32,
     borderBottomRightRadius: 32,
     paddingHorizontal: 20,
     paddingTop: 16,
+    zIndex: 1,
   },
 
   header: {
@@ -322,6 +330,7 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 20,
     marginTop: -70,
+    zIndex: 1,
   },
 
   row: {
@@ -392,7 +401,7 @@ const styles = StyleSheet.create({
 
   progressFill: {
     height: "100%",
-    backgroundColor: "#1F305E",
+    backgroundColor: "#213c74ff",
   },
 
   budgetFooter: {
@@ -407,15 +416,16 @@ const styles = StyleSheet.create({
 
   fab: {
     position: "absolute",
-    bottom: 16,
+    bottom: 25,
     right: 24,
-    backgroundColor: "#5B8DEF",
+    backgroundColor: "#213c74ff",
     width: 58,
     height: 58,
     borderRadius: 29,
     alignItems: "center",
     justifyContent: "center",
     elevation: 6,
+    zIndex: 30,    
   },
 
   sideMenu: {

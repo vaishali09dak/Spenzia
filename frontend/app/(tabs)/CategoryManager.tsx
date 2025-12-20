@@ -457,6 +457,7 @@ const styles = StyleSheet.create({
     paddingTop: 10,
   },
   pageTitle: {
+    marginTop: 10,
     fontSize: 34,
     fontWeight: '900',
     color: '#1F305E',

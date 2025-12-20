@@ -12,8 +12,10 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { eachDayOfInterval, startOfWeek, endOfWeek, addDays, addMonths, format, getDaysInMonth, startOfMonth } from 'date-fns';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { router } from 'expo-router';
 
 import { auth, db1 } from '../../firebase';
 
@@ -133,8 +135,13 @@ type HeaderProps = {
 
 const Header = ({ onPressSettings }: HeaderProps) => (
   <View style={styles.header}>
+    <TouchableOpacity style={styles.headerIconBtn} onPress={() => router.back()}>
+      <Ionicons name="arrow-back" size={22} color={PRIMARY} />
+    </TouchableOpacity>
+
     <Text style={styles.headerTitle}>Expense Heatmap</Text>
-    <TouchableOpacity onPress={onPressSettings}>
+
+    <TouchableOpacity style={styles.headerIconBtn} onPress={onPressSettings}>
       <Feather name="settings" size={24} color={PRIMARY} />
     </TouchableOpacity>
   </View>
@@ -695,10 +702,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 20,
   },
+  headerIconBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 2,
+  },
   headerTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: PRIMARY,
+    flex: 1,
+    textAlign: 'center',
+    marginTop: 10,
+    fontSize: 34,
+    fontWeight: '900',
+    color: '#1F305E',
+    letterSpacing: 0.2,
   },
   tabContainer: {
     flexDirection: 'row',

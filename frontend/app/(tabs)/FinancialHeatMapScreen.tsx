@@ -974,15 +974,19 @@ const styles = StyleSheet.create({
   sheetBackdrop: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.45)',
-    justifyContent: 'flex-end',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 18,
   },
   sheetCard: {
     backgroundColor: '#fff',
-    borderTopLeftRadius: 22,
-    borderTopRightRadius: 22,
+    width: '100%',
+    maxWidth: 420,
+    borderRadius: 22,
     paddingHorizontal: 18,
     paddingTop: 10,
     paddingBottom: 22,
+    overflow: 'hidden',
   },
   sheetHandle: {
     width: 44,

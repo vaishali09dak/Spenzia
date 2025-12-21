@@ -74,6 +74,8 @@ const DEFAULT_CATEGORIES: Category[] = [
   { id: 'Shopping', name: 'Shopping' },
   { id: 'Utilities', name: 'Utilities' },
   { id: 'Rent', name: 'Rent' },
+  { id: 'Health', name: 'Health' },
+  { id: 'Education', name: 'Education' },
   { id: 'Entertainment', name: 'Entertainment' },
   { id: 'Other', name: 'Other', isOther: true },
   // { id: 'Other', name: 'Other', isOther: true },
@@ -92,8 +94,6 @@ export default function CategoryManager() {
 
   const [search, setSearch] = useState('');
 
-  const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
-
   const [isManageVisible, setIsManageVisible] = useState(false);
   const [isEditorVisible, setIsEditorVisible] = useState(false);
 
@@ -111,7 +111,10 @@ export default function CategoryManager() {
       snap.forEach((d) => {
         const data = d.data() as any;
         if (!data?.name) return;
-        const name = String(data.name);
+        let name = String(data.name);
+        const normalized = name.trim().toLowerCase();
+        if (normalized === 'transport') name = 'Travel';
+        if (normalized === 'bills') name = 'Utilities';
         if (name.toLowerCase() === 'other') return;
         remote.push({
           id: d.id,
@@ -219,15 +222,8 @@ export default function CategoryManager() {
     ]);
   };
 
-  const handleCategoryPress = (cat: Category) => {
-    if (cat.isOther) {
-      setIsManageVisible(true);
-      return;
-    }
-
-    setSelectedCategoryIds((prev) =>
-      prev.includes(cat.id) ? prev.filter((id) => id !== cat.id) : [...prev, cat.id]
-    );
+  const openManage = () => {
+    setIsManageVisible(true);
   };
 
   const editableCategories = useMemo(() => {
@@ -284,7 +280,6 @@ export default function CategoryManager() {
       <View style={styles.body}>
         <FlatList
           data={gridData}
-          extraData={selectedCategoryIds}
           keyExtractor={(item) => item.id}
           numColumns={3}
           showsVerticalScrollIndicator={false}
@@ -310,10 +305,10 @@ export default function CategoryManager() {
                 style={[
                   styles.card,
                   index % 3 !== 2 ? { marginRight: TILE_GAP } : null,
-                  selectedCategoryIds.includes(item.id) ? styles.cardSelected : null,
                 ]}
                 activeOpacity={0.85}
-                onPress={() => handleCategoryPress(item)}
+                onPress={item.isOther ? openManage : undefined}
+                disabled={!item.isOther}
               >
                 <View style={styles.cardInner}>
                   <View style={[styles.iconBubble, item.isOther ? styles.iconBubbleOther : null]}>
@@ -328,12 +323,6 @@ export default function CategoryManager() {
                     {item.name}
                   </Text>
                 </View>
-
-                {selectedCategoryIds.includes(item.id) ? (
-                  <View style={styles.selectedBadge}>
-                    <Ionicons name="checkmark" size={14} color="#fff" />
-                  </View>
-                ) : null}
               </TouchableOpacity>
             );
           }}

@@ -20,55 +20,38 @@ export default function SignUpScreen() {
   const [loading, setLoading] = useState(false);
 
   const handleSignUp = async () => {
-    if(password !== confirmPassword){
-      Alert.alert("Error", "Passwords do not match");
+    const normalizedEmail = email.trim();
+    if (!normalizedEmail || !password || !confirmPassword) {
+      Alert.alert('Error', 'Please fill all fields');
       return;
     }
-    
+
+    if (password !== confirmPassword) {
+      Alert.alert('Error', 'Passwords do not match');
+      return;
+    }
+
     setLoading(true);
     try {
-      const handleSignUp = async () => {
-  if (password !== confirmPassword) {
-    Alert.alert("Error", "Passwords do not match");
-    return;
-  }
+      const userCredential = await createUserWithEmailAndPassword(auth, normalizedEmail, password);
+      const uid = userCredential.user.uid;
 
-  setLoading(true);
-  try {
-    const userCredential = await createUserWithEmailAndPassword(
-      auth,
-      email,
-      password
-    );
+      await setDoc(
+        doc(db1, 'users', uid),
+        {
+          email: normalizedEmail,
+          balance: 0,
+          createdAt: serverTimestamp(),
+        },
+        { merge: true }
+      );
 
-    const uid = userCredential.user.uid;
-
-    // ✅ CREATE USER DOCUMENT IN FIRESTORE
-    await setDoc(
-      doc(db1, "users", uid),
-      {
-        email,
-        balance: 0,               // 👈 INITIAL BALANCE
-        createdAt: serverTimestamp(),
-      },
-      { merge: true }
-    );
-
-    router.replace("/(auth)/userdetails");
-  } catch (error: any) {
-    Alert.alert("Sign Up Failed", error.message);
-  } finally {
-    setLoading(false);
-  }
-};
-
-
+      router.replace('/(auth)/userdetails');
     } catch (error: any) {
-      Alert.alert("Sign Up Failed", error.message);
+      Alert.alert('Sign Up Failed', error?.message ?? 'Something went wrong');
     } finally {
       setLoading(false);
     }
-
   };
 
   return (

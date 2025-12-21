@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
 type ActionType = 'expense' | 'income' | 'category';
 
@@ -8,7 +9,7 @@ type ActionOption = {
   id: ActionType;
   title: string;
   subtitle: string;
-  icon: string;
+  icon: React.ComponentProps<typeof Ionicons>['name'];
   colors: readonly [string, string, ...string[]];
 };
 
@@ -17,21 +18,21 @@ const options: ActionOption[] = [
     id: 'expense',
     title: 'Add Expense',
     subtitle: 'Track your spending',
-    icon: '📉',
+    icon: 'arrow-down-circle-outline',
     colors: ['#F093FB', '#F5576C', '#DC2430'],
   },
   {
     id: 'income',
     title: 'Add Income',
     subtitle: 'Record your earnings',
-    icon: '📈',
+    icon: 'arrow-up-circle-outline',
     colors: ['#11998E', '#38EF7D', '#16C172'],
   },
   {
     id: 'category',
     title: 'New Category',
     subtitle: 'Create custom category',
-    icon: '🏷️',
+    icon: 'pricetag-outline',
     colors: ['#4FACFE', '#00F2FE', '#3B82F6'],
   },
 ];
@@ -57,7 +58,7 @@ export default function QuickActionOptions({ onSelect }: Props) {
       { backgroundColor: option.colors[0] } // Use the first color as a solid background
     ]} 
   >
-    <Text style={styles.icon}>{option.icon}</Text>
+    <Ionicons name={option.icon} size={32} color="#fff" style={styles.icon} />
     <View style={{ flex: 1 }}>
       <Text style={styles.title}>{option.title}</Text>
       <Text style={styles.subtitle}>{option.subtitle}</Text>
@@ -85,7 +86,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   icon: {
-    fontSize: 32,
     marginRight: 16,
   },
   title: {

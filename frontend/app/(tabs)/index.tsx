@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
 import { auth, db1 } from "../../firebase";
-import { doc, getDoc } from "firebase/firestore";
 import {
   View,
   Text,
@@ -14,12 +13,23 @@ import { Ionicons } from "@expo/vector-icons";
 import { PieChart } from "react-native-chart-kit";
 import { router } from "expo-router";
 import { BlurView } from "expo-blur";
-import { collection, onSnapshot, query, where } from "firebase/firestore";
-import BackgroundDecor from "@/components/BackgroundDecor";
+import { collection, doc, onSnapshot, query, where } from "firebase/firestore";
 import ExpenseFabModal from '../(auth)/ExpenseFabModal';
 
 const { height, width } = Dimensions.get("window");
 const MENU_WIDTH = width * 0.70;
+
+const CATEGORY_COLORS: Record<string, string> = {
+  food: "#376118ff",
+  travel: "#FFB703",
+  shopping: "#bd284aff",
+  utilities: "#220b41ff",
+  rent: "#115d76ff",
+  entertainment: "#104657ff",
+  education: "#ffd166",
+  health: "#5a143eff",
+  other: "#0b172dff",
+};
 
 export default function HomeScreen() {
 
@@ -44,91 +54,93 @@ export default function HomeScreen() {
   };
 
   /* STATE (Backend-ready) */
-  const [income, setIncome] = useState(0);
+  const [baseIncome, setBaseIncome] = useState(0);
+  const [incomeTxTotal, setIncomeTxTotal] = useState(0);
   const [expenses, setExpenses] = useState(0);
   const [budget, setBudget] = useState(0);
   const [expenseData, setExpenseData] = useState<any[]>([]);
 
   /* DERIVED VALUES */
+  const income = baseIncome + incomeTxTotal;
   const balance = income - expenses;
   const remaining = budget - expenses;
   const progress = budget > 0 ? expenses / budget : 0;
 
-  const CATEGORY_COLORS: Record<string, string> = {
-  food: "#B9FBC0",          
-  travel: "#D0F4DE",        
-  shopping: "#FFB5A7",     
-  utilities: "#FAF1D6",    
-  rent: "#A2D2FF",         
-  entertainment: "#FFD1BA", 
-  education: "#FFC8DD",    
-  health: "#BDE0FE",     
-  bills: "#CDB4DB",      
-  transport: "#7dbfc0ff",   
-  other: "#c4d2ebff",     
-};
-
-
   useEffect(() => {
-  const user = auth.currentUser;
-  if (!user) return;
+    const user = auth.currentUser;
+    if (!user) return;
 
-  // 🔴 Listen to user profile (income/budget)
-  const userUnsub = onSnapshot(
-    doc(db1, "users", user.uid),
-    (snap) => {
-      if (!snap.exists()) return;
-      const data = snap.data();
-      setIncome(data.monthlyIncome || 0);
-      setBudget(data.monthlyBudget || 0);
-    }
-  );
-
-  // 🔴 Listen to transactions in real-time
-  const txQuery = query(
-    collection(db1, "users", user.uid, "transactions"),
-    where("type", "==", "expense")
-  );
-
-  const txUnsub = onSnapshot(txQuery, (snapshot) => {
-    let total = 0;
-    const categoryTotals: Record<string, number> = {};
-
-    snapshot.forEach((doc) => {
-      const data = doc.data();
-      const amount = Number(data.amount) || 0;
-      const category = (data.category || "Other").toLowerCase();
-
-      total += amount;
-      categoryTotals[category] =
-        (categoryTotals[category] || 0) + amount;
-    });
-
-    setExpenses(total);
-
-    const pieData = Object.entries(categoryTotals).map(
-      ([category, amount]) => ({
-        name: category.charAt(0).toUpperCase() + category.slice(1),
-        amount,
-        color: CATEGORY_COLORS[category] || "#CBD5E1",
-        legendFontColor: "#555",
-        legendFontSize: 12,
-      })
+    // 🔴 Listen to user profile (income/budget)
+    const userUnsub = onSnapshot(
+      doc(db1, "users", user.uid),
+      (snap) => {
+        if (!snap.exists()) return;
+        const data = snap.data();
+        setBaseIncome(data.monthlyIncome || 0);
+        setBudget(data.monthlyBudget || 0);
+      }
     );
 
-    setExpenseData(pieData);
-  });
+    // 🔴 Listen to transactions in real-time
+    const txQuery = query(
+      collection(db1, "users", user.uid, "transactions"),
+      where("type", "==", "expense")
+    );
 
-  // 🧹 CLEANUP
-  return () => {
-    userUnsub();
-    txUnsub();
-  };
-}, []);
+    const txUnsub = onSnapshot(txQuery, (snapshot) => {
+      let total = 0;
+      const categoryTotals: Record<string, number> = {};
 
-const [fabModalVisible, setFabModalVisible] = useState(false);
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        const amount = Number(data.amount) || 0;
+        const rawCategory = String(data.category || "Other").toLowerCase();
+        const category = rawCategory === 'transport' ? 'travel' : rawCategory === 'bills' ? 'utilities' : rawCategory;
 
-return (
+        total += amount;
+        categoryTotals[category] =
+          (categoryTotals[category] || 0) + amount;
+      });
+
+      setExpenses(total);
+
+      const pieData = Object.entries(categoryTotals).map(
+        ([category, amount]) => ({
+          name: category.charAt(0).toUpperCase() + category.slice(1),
+          amount,
+          color: CATEGORY_COLORS[category] || "#CBD5E1",
+          legendFontColor: "#555",
+          legendFontSize: 12,
+        })
+      );
+
+      setExpenseData(pieData);
+    });
+
+    const incomeQuery = query(
+      collection(db1, "users", user.uid, "transactions"),
+      where("type", "==", "income")
+    );
+
+    const incomeUnsub = onSnapshot(incomeQuery, (snapshot) => {
+      let total = 0;
+      snapshot.forEach((d) => {
+        const data = d.data();
+        total += Number(data.amount) || 0;
+      });
+      setIncomeTxTotal(total);
+    });
+
+    // 🧹 CLEANUP
+    return () => {
+      userUnsub();
+      txUnsub();
+      incomeUnsub();
+    };
+  }, []);
+
+  const [fabModalVisible, setFabModalVisible] = useState(false);
+  return (
     <SafeAreaView style={styles.container}>
        {/* <BackgroundDecor /> */}
 

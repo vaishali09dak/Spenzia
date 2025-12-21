@@ -1,4 +1,5 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+
 import {
   View,
   Text,
@@ -10,7 +11,7 @@ import {
   Platform,
 } from 'react-native';
 
-import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { addDoc, collection, getDocs, serverTimestamp } from 'firebase/firestore';
 
 import { auth, db1 } from '../../firebase';
 
@@ -99,19 +100,20 @@ const NoteInput: React.FC<{
 );
 
 const INITIAL_CATEGORIES = [
-  { name: 'Food', color: '#64B5F6' },
-  { name: 'Transport', color: '#FFB74D' },
-  { name: 'Shopping', color: '#EF5350' },
-  { name: 'Bills', color: '#66BB6A' },
-  { name: 'Health', color: '#BA68C8' },
-  { name: 'Entertainment', color: '#FF7043' },
-  { name: 'Education', color: '#42A5F5' },
-  { name: 'Other', color: '#78909C' },
+  { name: 'Food', color: '#376118ff' },
+  { name: 'Travel', color: '#FFB703' },
+  { name: 'Shopping', color: '#bd284aff' },
+  { name: 'Utilities', color: '#220b41ff' },
+  { name: 'Rent', color: '#115d76ff' },
+  { name: 'Health', color: '#5a143eff' },
+  { name: 'Education', color: '#ffd166' },
+  { name: 'Entertainment', color: '#104657ff' },
+  { name: 'Other', color: '#0b172dff' },
 ];
 
 const ExpenseFabModal: React.FC<Props> = ({ visible, onClose }) => {
   const [modalType, setModalType] = useState<ModalType>(null);
-  const [categories] = useState(INITIAL_CATEGORIES);
+  const [categories, setCategories] = useState<Category[]>(INITIAL_CATEGORIES);
   const [selectedCategory, setSelectedCategory] = useState('');
   const [note, setNote] = useState('');
 
@@ -132,22 +134,90 @@ const ExpenseFabModal: React.FC<Props> = ({ visible, onClose }) => {
     onClose();
   };
 
+  useEffect(() => {
+    const loadCategories = async () => {
+      if (!visible) return;
+      const user = auth.currentUser;
+      if (!user) {
+        setCategories(INITIAL_CATEGORIES);
+        setSelectedCategory((prev) => {
+          const key = String(prev).trim().toLowerCase();
+          if (key === 'transport') return 'Travel';
+          if (key === 'bills') return 'Utilities';
+          return prev;
+        });
+        return;
+      }
+
+      try {
+        const snap = await getDocs(collection(db1, 'users', user.uid, 'categories'));
+        const remoteNames: string[] = [];
+        snap.forEach((d) => {
+          const data = d.data() as any;
+          let name = String(data?.name ?? '').trim();
+          if (!name) return;
+          const normalized = name.toLowerCase();
+          if (normalized === 'transport') name = 'Travel';
+          if (normalized === 'bills') name = 'Utilities';
+          if (name.toLowerCase() === 'other') return;
+          remoteNames.push(name);
+        });
+
+        const colorByName = new Map(INITIAL_CATEGORIES.map((c) => [c.name.toLowerCase(), c.color] as const));
+        const seen = new Set<string>();
+
+        const mergedNames = [...INITIAL_CATEGORIES.map((c) => c.name), ...remoteNames]
+          .map((n) => String(n).trim())
+          .filter(Boolean)
+          .filter((n) => {
+            const key = n.toLowerCase();
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+          });
+
+        const otherIndex = mergedNames.findIndex((n) => n.toLowerCase() === 'other');
+        if (otherIndex !== -1) {
+          const [other] = mergedNames.splice(otherIndex, 1);
+          mergedNames.push(other);
+        }
+
+        const next = mergedNames.map((name) => ({
+          name,
+          color: colorByName.get(name.toLowerCase()) ?? '#78909C',
+        }));
+
+        setCategories(next);
+        setSelectedCategory((prev) => {
+          const key = String(prev).trim().toLowerCase();
+          if (key === 'transport') return 'Travel';
+          if (key === 'bills') return 'Utilities';
+          return prev;
+        });
+      } catch (e) {
+        console.error(e);
+        setCategories(INITIAL_CATEGORIES);
+      }
+    };
+
+    loadCategories();
+  }, [visible]);
+
   const submitIncome = async () => {
     if (!amountRef.current || !selectedCategory) return;
     const user = auth.currentUser;
     if (!user) return;
 
     await addDoc(
-  collection(db1, 'users', user.uid, 'transactions'),
-  {
-    type: 'expense',
-    amount: Number(amountRef.current),
-    category: selectedCategory,
-    note,
-    createdAt: serverTimestamp(),
-  }
-);
-
+      collection(db1, 'users', user.uid, 'transactions'),
+      {
+        type: 'income',
+        amount: Number(amountRef.current),
+        category: selectedCategory,
+        note,
+        createdAt: serverTimestamp(),
+      }
+    );
 
     closeForm();
   };
@@ -158,15 +228,15 @@ const ExpenseFabModal: React.FC<Props> = ({ visible, onClose }) => {
     if (!user) return;
 
     await addDoc(
-  collection(db1, 'users', user.uid, 'transactions'),
-  {
-    type: 'income',
-    amount: Number(amountRef.current),
-    category: selectedCategory,
-    note,
-    createdAt: serverTimestamp(),
-  }
-);
+      collection(db1, 'users', user.uid, 'transactions'),
+      {
+        type: 'expense',
+        amount: Number(amountRef.current),
+        category: selectedCategory,
+        note,
+        createdAt: serverTimestamp(),
+      }
+    );
 
     closeForm();
   };
@@ -187,7 +257,7 @@ const ExpenseFabModal: React.FC<Props> = ({ visible, onClose }) => {
               <View style={styles.fabButtons}>
                 <TouchableOpacity
                   style={styles.fabWrapper}
-                  onPress={() => openForm('income')}
+                  onPress={() => openForm('expense')}
                   activeOpacity={0.8}
                 >
                   <View style={[styles.fab, { backgroundColor: '#EF4444' }]}>
@@ -198,7 +268,7 @@ const ExpenseFabModal: React.FC<Props> = ({ visible, onClose }) => {
 
                 <TouchableOpacity
                   style={styles.fabWrapper}
-                  onPress={() => openForm('expense')}
+                  onPress={() => openForm('income')}
                   activeOpacity={0.8}
                 >
                   <View style={[styles.fab, { backgroundColor: '#10B981' }]}>
@@ -228,14 +298,14 @@ const ExpenseFabModal: React.FC<Props> = ({ visible, onClose }) => {
               <TouchableOpacity
                 style={[
                   styles.submitBtn,
-                  modalType === 'income'
+                  modalType === 'expense'
                     ? { backgroundColor: '#EF4444' }
                     : { backgroundColor: '#10B981' },
                 ]}
-                onPress={modalType === 'income' ? submitIncome : submitExpense}
+                onPress={modalType === 'expense' ? submitExpense : submitIncome}
               >
                 <Text style={styles.submitText}>
-                  {modalType === 'income' ? 'Add Expense' : 'Add Income'}
+                  {modalType === 'expense' ? 'Add Expense' : 'Add Income'}
                 </Text>
               </TouchableOpacity>
             </ScrollView>

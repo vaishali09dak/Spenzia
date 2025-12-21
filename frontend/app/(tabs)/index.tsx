@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
 import { auth, db1 } from "../../firebase";
-import { doc } from "firebase/firestore";
 import {
   View,
   Text,
@@ -14,11 +13,23 @@ import { Ionicons } from "@expo/vector-icons";
 import { PieChart } from "react-native-chart-kit";
 import { router } from "expo-router";
 import { BlurView } from "expo-blur";
-import { collection, onSnapshot, query, where } from "firebase/firestore";
+import { collection, doc, onSnapshot, query, where } from "firebase/firestore";
 import ExpenseFabModal from '../(auth)/ExpenseFabModal';
 
 const { height, width } = Dimensions.get("window");
 const MENU_WIDTH = width * 0.70;
+
+const CATEGORY_COLORS: Record<string, string> = {
+  food: "#376118ff",
+  travel: "#FFB703",
+  shopping: "#bd284aff",
+  utilities: "#220b41ff",
+  rent: "#115d76ff",
+  entertainment: "#104657ff",
+  education: "#ffd166",
+  health: "#5a143eff",
+  other: "#0b172dff",
+};
 
 export default function HomeScreen() {
 
@@ -54,18 +65,6 @@ export default function HomeScreen() {
   const balance = income - expenses;
   const remaining = budget - expenses;
   const progress = budget > 0 ? expenses / budget : 0;
-
-  const CATEGORY_COLORS: Record<string, string> = {
-    food: "#376118ff",
-    travel: "#FFB703",
-    shopping: "#bd284aff",
-    utilities: "#220b41ff",
-    rent: "#115d76ff",
-    entertainment: "#104657ff",
-    education: "#ffd166",
-    health: "#5a143eff",
-    other: "#0b172dff",
-  };
 
   useEffect(() => {
     const user = auth.currentUser;

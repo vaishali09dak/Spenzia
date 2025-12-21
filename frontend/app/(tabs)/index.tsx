@@ -20,15 +20,17 @@ const { height, width } = Dimensions.get("window");
 const MENU_WIDTH = width * 0.70;
 
 const CATEGORY_COLORS: Record<string, string> = {
-  food: "#376118ff",
-  travel: "#FFB703",
-  shopping: "#bd284aff",
-  utilities: "#220b41ff",
-  rent: "#115d76ff",
-  entertainment: "#104657ff",
-  education: "#ffd166",
-  health: "#5a143eff",
-  other: "#0b172dff",
+  education: "#F7B6C8",
+  bills: "#C7B1DB",
+  utilities: "#C7B1DB",
+  entertainment: "#F3C3A7",
+  food: "#BFF4C9",
+  transport: "#7FC4C4",
+  travel: "#7FC4C4",
+  health: "#B5D7F4",
+  shopping: "#F5D7A6",
+  rent: "#C9D4E6",
+  other: "#CBD5E1",
 };
 
 export default function HomeScreen() {

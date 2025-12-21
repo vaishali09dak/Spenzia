@@ -281,15 +281,22 @@ export default function HomeScreen() {
       router.push('/savingGoals');
     }}
   />
-  <MenuItem icon="stats-chart-outline" label="Monthly Reports" />
+  <MenuItem
+    icon="stats-chart-outline"
+    label="Monthly Reports"
+    onPress={() => {
+      closeMenu();
+      router.push('/(tabs)/MonthlyReport' as any);
+    }}
+  />
   <MenuItem icon="trending-up-outline" label="Spending Insights"
   onPress={() => {closeMenu(); router.push('../(auth)/SpendingInsights')} } /> 
   <MenuItem icon="alert-circle-outline" label="Alerts" />
 
 </Animated.View>
 
-    </SafeAreaView>
-  );
+  </SafeAreaView>
+);
 }
 
 function MenuItem({ icon, label, onPress }: any) {

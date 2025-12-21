@@ -99,21 +99,11 @@ const NoteInput: React.FC<{
   </View>
 );
 
-const INITIAL_CATEGORIES = [
-  { name: 'Food', color: '#376118ff' },
-  { name: 'Travel', color: '#FFB703' },
-  { name: 'Shopping', color: '#bd284aff' },
-  { name: 'Utilities', color: '#220b41ff' },
-  { name: 'Rent', color: '#115d76ff' },
-  { name: 'Health', color: '#5a143eff' },
-  { name: 'Education', color: '#ffd166' },
-  { name: 'Entertainment', color: '#104657ff' },
-  { name: 'Other', color: '#0b172dff' },
-];
+
 
 const ExpenseFabModal: React.FC<Props> = ({ visible, onClose }) => {
   const [modalType, setModalType] = useState<ModalType>(null);
-  const [categories, setCategories] = useState<Category[]>(INITIAL_CATEGORIES);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategory, setSelectedCategory] = useState('');
   const [note, setNote] = useState('');
 
@@ -135,73 +125,46 @@ const ExpenseFabModal: React.FC<Props> = ({ visible, onClose }) => {
   };
 
   useEffect(() => {
-    const loadCategories = async () => {
-      if (!visible) return;
-      const user = auth.currentUser;
-      if (!user) {
-        setCategories(INITIAL_CATEGORIES);
-        setSelectedCategory((prev) => {
-          const key = String(prev).trim().toLowerCase();
-          if (key === 'transport') return 'Travel';
-          if (key === 'bills') return 'Utilities';
-          return prev;
+  const loadCategories = async () => {
+    if (!visible) return;
+
+    const user = auth.currentUser;
+    if (!user) return;
+
+    try {
+      const snap = await getDocs(
+        collection(db1, 'users', user.uid, 'categories')
+      );
+
+      const list: Category[] = [];
+
+      snap.forEach((doc) => {
+        const data = doc.data();
+        if (!data?.name) return;
+
+        list.push({
+          name: data.name,
+          color: '#78909C', // neutral color (or map later)
         });
-        return;
-      }
+      });
 
-      try {
-        const snap = await getDocs(collection(db1, 'users', user.uid, 'categories'));
-        const remoteNames: string[] = [];
-        snap.forEach((d) => {
-          const data = d.data() as any;
-          let name = String(data?.name ?? '').trim();
-          if (!name) return;
-          const normalized = name.toLowerCase();
-          if (normalized === 'transport') name = 'Travel';
-          if (normalized === 'bills') name = 'Utilities';
-          if (name.toLowerCase() === 'other') return;
-          remoteNames.push(name);
-        });
+      // Keep "Other" at the end
+      list.sort((a, b) => {
+        if (a.name === 'Other') return 1;
+        if (b.name === 'Other') return -1;
+        return a.name.localeCompare(b.name);
+      });
 
-        const colorByName = new Map(INITIAL_CATEGORIES.map((c) => [c.name.toLowerCase(), c.color] as const));
-        const seen = new Set<string>();
+      setCategories(list);
+      setSelectedCategory('');
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
-        const mergedNames = [...INITIAL_CATEGORIES.map((c) => c.name), ...remoteNames]
-          .map((n) => String(n).trim())
-          .filter(Boolean)
-          .filter((n) => {
-            const key = n.toLowerCase();
-            if (seen.has(key)) return false;
-            seen.add(key);
-            return true;
-          });
+  loadCategories();
+}, [visible]);
 
-        const otherIndex = mergedNames.findIndex((n) => n.toLowerCase() === 'other');
-        if (otherIndex !== -1) {
-          const [other] = mergedNames.splice(otherIndex, 1);
-          mergedNames.push(other);
-        }
-
-        const next = mergedNames.map((name) => ({
-          name,
-          color: colorByName.get(name.toLowerCase()) ?? '#78909C',
-        }));
-
-        setCategories(next);
-        setSelectedCategory((prev) => {
-          const key = String(prev).trim().toLowerCase();
-          if (key === 'transport') return 'Travel';
-          if (key === 'bills') return 'Utilities';
-          return prev;
-        });
-      } catch (e) {
-        console.error(e);
-        setCategories(INITIAL_CATEGORIES);
-      }
-    };
-
-    loadCategories();
-  }, [visible]);
 
   const submitIncome = async () => {
     if (!amountRef.current || !selectedCategory) return;
@@ -327,7 +290,8 @@ const styles = StyleSheet.create({
   overlay: { 
     flex: 1, 
     backgroundColor: 'rgba(0,0,0,0.6)', 
-    justifyContent: 'flex-end',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   overlayCentered: {
     justifyContent: 'center',
@@ -335,10 +299,10 @@ const styles = StyleSheet.create({
   },
   modal: { 
     backgroundColor: '#FFFFFF', 
-    padding: 24, 
-    borderTopLeftRadius: 28, 
-    borderTopRightRadius: 28,
-    maxHeight: '90%',
+    padding: 16, 
+    borderRadius: 28,
+    maxHeight: '85%',
+    width: '90%',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.1,
@@ -433,7 +397,7 @@ const styles = StyleSheet.create({
   },
 
   section: {
-    marginBottom: 24,
+    marginBottom: 16,
   },
   inputContainer: {
     marginBottom: 24,
@@ -502,9 +466,9 @@ const styles = StyleSheet.create({
   },
 
   noteInput: {
-    height: 80,
+    height: 60,
     textAlignVertical: 'top',
-    paddingTop: 12,
+    paddingTop: 8,
   },
 
   submitBtn: { 
@@ -512,10 +476,10 @@ const styles = StyleSheet.create({
     padding: 18, 
     borderRadius: 16,
     alignItems: 'center',
-    marginTop: 8,
-    marginBottom: 12,
+    marginTop: 0,
+    marginBottom: 0 ,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 6,

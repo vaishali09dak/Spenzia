@@ -101,42 +101,60 @@ export default function CategoryManager() {
   const [draftName, setDraftName] = useState('');
 
   const loadCategories = async () => {
-    const user = auth.currentUser;
-    if (!user) return;
+  const user = auth.currentUser;
+  if (!user) return;
 
-    setLoading(true);
-    try {
-      const snap = await getDocs(collection(db1, 'users', user.uid, 'categories'));
-      const remote: Category[] = [];
-      snap.forEach((d) => {
-        const data = d.data() as any;
-        if (!data?.name) return;
-        let name = String(data.name);
-        const normalized = name.trim().toLowerCase();
-        if (normalized === 'transport') name = 'Travel';
-        if (normalized === 'bills') name = 'Utilities';
-        if (name.toLowerCase() === 'other') return;
-        remote.push({
-          id: d.id,
-          name,
-        });
-      });
+  setLoading(true);
+  try {
+    const snap = await getDocs(
+      collection(db1, 'users', user.uid, 'categories')
+    );
 
-      remote.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
-
-      const merged: Category[] = [...DEFAULT_CATEGORIES];
-      remote.forEach((r) => {
-        const exists = merged.some((c) => c.name.toLowerCase() === r.name.toLowerCase());
-        if (!exists) merged.push(r);
-      });
-
-      setCategories(orderCategories(merged));
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
+    // 🔹 STEP 1: Seed default categories ONLY if empty
+    if (snap.empty) {
+      for (const cat of DEFAULT_CATEGORIES) {
+        await setDoc(
+          doc(db1, 'users', user.uid, 'categories', cat.name),
+          {
+            name: cat.name,
+            createdAt: new Date(),
+          }
+        );
+      }
     }
-  };
+
+    // 🔹 STEP 2: Read categories (after seeding)
+    const remote: Category[] = [];
+
+    snap.forEach((d) => {
+      const data = d.data() as any;
+      if (!data?.name) return;
+
+      if (data.name.toLowerCase() === 'other') return;
+
+      remote.push({
+        id: d.id,
+        name: data.name,
+      });
+    });
+
+    const merged: Category[] = [...DEFAULT_CATEGORIES];
+
+    remote.forEach((r) => {
+      const exists = merged.some(
+        (c) => c.name.toLowerCase() === r.name.toLowerCase()
+      );
+      if (!exists) merged.push(r);
+    });
+
+    setCategories(orderCategories(merged));
+  } catch (e) {
+    console.error(e);
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   useEffect(() => {
     loadCategories();

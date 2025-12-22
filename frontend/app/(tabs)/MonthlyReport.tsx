@@ -434,11 +434,13 @@ export default function MonthlyReport() {
                 height={200}
                 accessor="amount"
                 backgroundColor="transparent"
-                paddingLeft="-2"
+                paddingLeft="0"
+                center={[10, 0]}
                 absolute
                 chartConfig={{
                   color: () => "#000",
                 }}
+                style={{ alignSelf: "center" }}
               />
             )}
           </View>

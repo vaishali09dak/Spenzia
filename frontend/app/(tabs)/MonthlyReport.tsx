@@ -14,7 +14,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { auth, db1 } from "../../firebase";
-import { collection, getDocs, orderBy, query } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, orderBy, query } from "firebase/firestore";
 import { LineChart, PieChart } from "react-native-chart-kit";
 import { router } from "expo-router";
 import * as Print from "expo-print";
@@ -73,6 +73,7 @@ export default function MonthlyReport() {
   const [refreshing, setRefreshing] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [transactions, setTransactions] = useState<Txn[]>([]);
+  const [baseIncome, setBaseIncome] = useState(0);
   const [monthDate, setMonthDate] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1));
 
   const monthLabel = useMemo(() => {
@@ -88,7 +89,16 @@ export default function MonthlyReport() {
       const user = auth.currentUser;
       if (!user) {
         setTransactions([]);
+        setBaseIncome(0);
         return;
+      }
+
+      const userSnap = await getDoc(doc(db1, "users", user.uid));
+      if (userSnap.exists()) {
+        const data = userSnap.data() as any;
+        setBaseIncome(Number(data?.monthlyIncome) || 0);
+      } else {
+        setBaseIncome(0);
       }
 
       const transactionsRef = collection(db1, "users", user.uid, "transactions");
@@ -129,8 +139,9 @@ export default function MonthlyReport() {
       if (t.type === "expense") expenses += amount;
     });
 
-    return { income, expenses, net: income - expenses };
-  }, [filtered]);
+    const totalIncome = (Number(baseIncome) || 0) + income;
+    return { income: totalIncome, expenses, net: totalIncome - expenses };
+  }, [filtered, baseIncome]);
 
   const categoryPie = useMemo(() => {
     const totalsByCategory: Record<string, number> = {};
@@ -174,6 +185,11 @@ export default function MonthlyReport() {
 
     return { labels, data };
   }, [filtered, monthDate]);
+
+  const dailyChartWidth = useMemo(() => {
+    const points = dailySeries.data.length;
+    return Math.max(CHART_WIDTH, points * 18);
+  }, [dailySeries.data.length]);
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -437,38 +453,44 @@ export default function MonthlyReport() {
                 <Text style={styles.emptyText}>No daily spending data for this month.</Text>
               </View>
             ) : (
-              <LineChart
-                data={{
-                  labels: dailySeries.labels,
-                  datasets: [{ data: dailySeries.data }],
-                }}
-                width={CHART_WIDTH}
-                height={220}
-                withDots={false}
-                withInnerLines={false}
-                withOuterLines={false}
-                fromZero
-                segments={4}
-                yAxisLabel="₹"
-                xLabelsOffset={-2}
-                verticalLabelRotation={0}
-                chartConfig={{
-                  backgroundColor: "#fff",
-                  backgroundGradientFrom: "#fff",
-                  backgroundGradientTo: "#fff",
-                  decimalPlaces: 0,
-                  color: () => PRIMARY,
-                  labelColor: () => "#777",
-                  formatYLabel: (y) => {
-                    const n = Number(y);
-                    return Number.isFinite(n) ? String(Math.round(n)) : String(y);
-                  },
-                  propsForBackgroundLines: {
-                    stroke: "#E6ECFF",
-                  },
-                }}
-                style={styles.lineChart}
-              />
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.chartScrollContent}
+              >
+                <LineChart
+                  data={{
+                    labels: dailySeries.labels,
+                    datasets: [{ data: dailySeries.data }],
+                  }}
+                  width={dailyChartWidth}
+                  height={220}
+                  withDots={false}
+                  withInnerLines={false}
+                  withOuterLines={false}
+                  fromZero
+                  segments={4}
+                  yAxisLabel="₹"
+                  xLabelsOffset={-2}
+                  verticalLabelRotation={0}
+                  chartConfig={{
+                    backgroundColor: "#fff",
+                    backgroundGradientFrom: "#fff",
+                    backgroundGradientTo: "#fff",
+                    decimalPlaces: 0,
+                    color: () => PRIMARY,
+                    labelColor: () => "#777",
+                    formatYLabel: (y) => {
+                      const n = Number(y);
+                      return Number.isFinite(n) ? String(Math.round(n)) : String(y);
+                    },
+                    propsForBackgroundLines: {
+                      stroke: "#E6ECFF",
+                    },
+                  }}
+                  style={styles.lineChart}
+                />
+              </ScrollView>
             )}
           </View>
         </View>
@@ -685,5 +707,8 @@ const styles = StyleSheet.create({
   },
   lineChart: {
     borderRadius: 16,
+  },
+  chartScrollContent: {
+    paddingRight: 4,
   },
 });

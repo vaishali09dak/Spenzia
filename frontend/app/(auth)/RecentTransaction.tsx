@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   StyleSheet,
   StatusBar,
+  Modal
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
@@ -21,6 +22,10 @@ const RecentTransactions = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState<'all' | 'income' | 'expense'>('all');
+
+  const [selectedTransaction, setSelectedTransaction] = useState<any | null>(null);
+const [detailVisible, setDetailVisible] = useState(false);
+
 
   const loadData = async () => {
     setLoading(true);
@@ -115,6 +120,7 @@ const RecentTransactions = () => {
       <ScrollView
         style={styles.content}
         contentContainerStyle={styles.contentContainer}
+        keyboardShouldPersistTaps="handled"
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -167,7 +173,16 @@ const RecentTransactions = () => {
                     </Text>
                   )}
 
-                  <View style={styles.transactionCard}>
+                  <TouchableOpacity
+  activeOpacity={0.85}
+  onPress={() => {
+    setSelectedTransaction(transaction);
+    setDetailVisible(true);
+  }}
+  style={styles.transactionCard}
+>
+
+
                     <View style={styles.transactionContent}>
                       <View style={styles.iconContainer}>
                         <Feather
@@ -179,12 +194,15 @@ const RecentTransactions = () => {
                           size={24}
                           color="#2C3E7C"
                         />
+                        
                       </View>
+
 
                       <View style={styles.transactionInfo}>
                         <Text style={styles.transactionTitle}>
                           {transaction.category}
                         </Text>
+
                         <Text style={styles.timeText}>
                           {new Date(
                             transaction.createdAt.toDate
@@ -195,7 +213,10 @@ const RecentTransactions = () => {
                             minute: '2-digit',
                           })}
                         </Text>
+
+                        
                       </View>
+
 
                       <Text
                         style={[
@@ -209,13 +230,106 @@ const RecentTransactions = () => {
                         {formatCurrency(transaction.amount)}
                       </Text>
                     </View>
+                    </TouchableOpacity>
                   </View>
-                </View>
+                
               );
             })
           )}
         </View>
       </ScrollView>
+      
+        <Modal
+          visible={detailVisible}
+          animationType="slide"
+          transparent
+          onRequestClose={() => setDetailVisible(false)}
+        >
+          {selectedTransaction && (
+          <View style={styles.modalOverlay}>
+            <View style={styles.detailModal}>
+
+              <Text style={styles.modalTitle}>Transaction Details</Text>
+
+              <View style={styles.detailRow}>
+          <Text style={styles.detailLabel}>Amount</Text>
+          <Text
+            style={[
+              styles.detailValue,
+              selectedTransaction.type === 'income'
+                ? styles.incomeAmount
+                : styles.expenseAmount,
+            ]}
+          >
+            {selectedTransaction.type === 'income' ? '+' : '-'}
+            {formatCurrency(selectedTransaction.amount)}
+          </Text>
+        </View>
+
+        <View style={styles.detailRow}>
+          <Text style={styles.detailLabel}>Category</Text>
+          <Text style={styles.detailValue}>
+            {selectedTransaction.category}
+          </Text>
+        </View>
+        <View style={styles.detailRow}>
+  <Text style={styles.detailLabel}>
+    {selectedTransaction.type === 'income'
+      ? 'Received From'
+      : 'Paid To'}
+  </Text>
+  <Text style={styles.detailValue}>
+    {selectedTransaction.counterparty || '—'}
+  </Text>
+</View>
+
+
+        <View style={styles.detailRow}>
+          <Text style={styles.detailLabel}>Date</Text>
+          <Text style={styles.detailValue}>
+            {new Date(
+              selectedTransaction.createdAt.toDate
+                ? selectedTransaction.createdAt.toDate()
+                : selectedTransaction.createdAt
+            ).toLocaleString()}
+          </Text>
+        </View>
+
+        {selectedTransaction.note && (
+          <View style={styles.detailBlock}>
+            <Text style={styles.detailLabel}>Note</Text>
+            <Text style={styles.noteText}>
+              {selectedTransaction.note}
+            </Text>
+          </View>
+        )}
+
+        {selectedTransaction.tags?.length > 0 && (
+          <View style={styles.detailBlock}>
+            <Text style={styles.detailLabel}>Tags</Text>
+            <View style={styles.tagsRow}>
+              {selectedTransaction.tags.map((tag: string, i: number) => (
+                <View key={i} style={styles.tagChip}>
+                  <Text style={styles.tagText}>#{tag}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
+
+        <TouchableOpacity
+          style={styles.closeModalBtn}
+          onPress={() => setDetailVisible(false)}
+        >
+          <Text style={styles.closeModalText}>Close</Text>
+        </TouchableOpacity>
+
+      </View>
+    </View>
+  
+)}
+</Modal>
+
     </View>
   );
 };
@@ -393,4 +507,86 @@ const styles = StyleSheet.create({
   expenseAmount: {
     color: '#FF3B30',
   },
+  noteText: {
+  fontSize: 13,
+  color: '#6B7280',
+  marginTop: 4,
+},
+
+tagsRow: {
+  flexDirection: 'row',
+  flexWrap: 'wrap',
+  gap: 8,
+  marginTop: 12,
+},
+
+tagChip: {
+  backgroundColor: '#EEF2FF',
+  paddingHorizontal: 10,
+  paddingVertical: 4,
+  borderRadius: 12,
+},
+
+tagText: {
+  fontSize: 12,
+  fontWeight: '600',
+  color: '#2C3E7C',
+},
+modalOverlay: {
+  flex: 1,
+  backgroundColor: 'rgba(0,0,0,0.4)',
+  justifyContent: 'flex-end',
+},
+
+detailModal: {
+  backgroundColor: '#FFFFFF',
+  borderTopLeftRadius: 24,
+  borderTopRightRadius: 24,
+  padding: 24,
+  maxHeight: '85%',
+},
+
+modalTitle: {
+  fontSize: 20,
+  fontWeight: '800',
+  color: '#1F305E',
+  marginBottom: 20,
+},
+
+detailRow: {
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  marginBottom: 14,
+},
+
+detailLabel: {
+  fontSize: 14,
+  color: '#6B7280',
+  fontWeight: '600',
+},
+
+detailValue: {
+  fontSize: 15,
+  fontWeight: '700',
+  color: '#1F305E',
+},
+
+detailBlock: {
+  marginTop: 16,
+},
+
+closeModalBtn: {
+  marginTop: 24,
+  backgroundColor: '#1F305E',
+  paddingVertical: 14,
+  borderRadius: 14,
+  alignItems: 'center',
+},
+
+closeModalText: {
+  color: '#FFFFFF',
+  fontSize: 16,
+  fontWeight: '700',
+},
+
 });

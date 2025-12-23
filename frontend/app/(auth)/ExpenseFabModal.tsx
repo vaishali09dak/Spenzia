@@ -34,6 +34,8 @@ interface ExtractedData {
   type: 'income' | 'expense';
   category: string;
   note: string;
+  counterparty?: string;
+  date?: Date;
 }
 
 const DEFAULT_CATEGORIES: Category[] = [
@@ -49,80 +51,8 @@ const DEFAULT_CATEGORIES: Category[] = [
 ];
 
 
-const AmountInput: React.FC<{ amountRef: React.MutableRefObject<string> }> = ({ amountRef }) => (
-  <View style={styles.inputContainer}>
-    <Text style={styles.label}>Amount</Text>
-    <View style={styles.amountInputWrapper}>
-      <Text style={styles.currencySymbol}>₹</Text>
-      <TextInput
-        placeholder="0.00"
-        placeholderTextColor="#999"
-        keyboardType="number-pad"
-        defaultValue={amountRef.current}
-        onChangeText={(text) => (amountRef.current = text)}
-        style={styles.amountInput}
-      />
-    </View>
-  </View>
-);
-
-const CategorySection: React.FC<{
-  categories: Category[];
-  selectedCategory: string;
-  setSelectedCategory: React.Dispatch<React.SetStateAction<string>>;
-}> = ({ categories, selectedCategory, setSelectedCategory }) => (
-  <View style={styles.section}>
-    <Text style={styles.label}>Select Category</Text>
-    <View style={styles.categoryGrid}>
-      {categories.map((cat) => (
-        <TouchableOpacity
-          key={cat.name}
-          style={[
-            styles.categoryChip,
-            selectedCategory === cat.name && {
-              backgroundColor: cat.color,
-              borderColor: cat.color,
-            },
-          ]}
-          onPress={() => setSelectedCategory(cat.name)}
-        >
-          <Text
-            style={[
-              styles.categoryChipText,
-              selectedCategory === cat.name && styles.categoryChipTextSelected,
-            ]}
-          >
-            {cat.name}
-          </Text>
-        </TouchableOpacity>
-      ))}
-    </View>
-  </View>
-);
-
-const NoteInput: React.FC<{
-  note: string;
-  setNote: React.Dispatch<React.SetStateAction<string>>;
-}> = ({ note, setNote }) => (
-  <View style={styles.inputContainer}>
-    <Text style={styles.label}>Note (Optional)</Text>
-
-    <TextInput
-      placeholder="Add a note..."
-      placeholderTextColor="#999"
-      value={note}
-      onChangeText={setNote}
-      style={[styles.input, styles.noteInput]}
-      multiline
-      numberOfLines={3}
-      blurOnSubmit={false}
-      scrollEnabled={false}
-    />
-  </View>
-);
 
 const ExpenseFabModal: React.FC<Props> = ({ visible, onClose }) => {
-  const [modalType, setModalType] = useState<ModalType>(null);
   const [inputMode, setInputMode] = useState<InputMode>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategory, setSelectedCategory] = useState('');
@@ -130,24 +60,29 @@ const ExpenseFabModal: React.FC<Props> = ({ visible, onClose }) => {
   const [smsMessage, setSmsMessage] = useState('');
   const [loadingAI, setLoadingAI] = useState(false);
   const [extractedData, setExtractedData] = useState<ExtractedData | null>(null);
+  
+  // New fields
+  const [transactionType, setTransactionType] = useState<'income' | 'expense'>('expense');
+  
+  const [transactionDate, setTransactionDate] = useState(new Date());
+  const [counterparty, setCounterparty] = useState('');
+
 
   const amountRef = useRef('');
-
-  const openTypeSelection = (type: ModalType) => {
-    setModalType(type);
-    setInputMode('choice');
-  };
 
   const openForm = () => setInputMode('form');
   const openSMS = () => setInputMode('sms');
 
   const closeForm = () => {
-    setModalType(null);
     setInputMode(null);
     setSelectedCategory('');
     setNote('');
     setSmsMessage('');
     setExtractedData(null);
+    setTransactionType('expense');
+    
+    setTransactionDate(new Date());
+    setCounterparty('');
     amountRef.current = '';
   };
 
@@ -165,69 +100,64 @@ const ExpenseFabModal: React.FC<Props> = ({ visible, onClose }) => {
       setNote('');
       setSmsMessage('');
       setExtractedData(null);
+      
       amountRef.current = '';
     } else if (inputMode === 'choice') {
-      setModalType(null);
       setInputMode(null);
     }
   };
 
   useEffect(() => {
-  if (!visible) return;
+    if (!visible) return;
 
-  const loadCategories = async () => {
-    const user = auth.currentUser;
-    if (!user) return;
+    const loadCategories = async () => {
+      const user = auth.currentUser;
+      if (!user) return;
 
-    try {
-      const snap = await getDocs(
-        collection(db1, 'users', user.uid, 'categories')
-      );
+      try {
+        const snap = await getDocs(
+          collection(db1, 'users', user.uid, 'categories')
+        );
 
-      const userCategories: Category[] = [];
+        const userCategories: Category[] = [];
 
-      snap.forEach((doc) => {
-        const data = doc.data();
-        if (!data?.name) return;
+        snap.forEach((doc) => {
+          const data = doc.data();
+          if (!data?.name) return;
 
-        userCategories.push({
-          name: data.name,
-          color: data.color || '#78909C',
+          userCategories.push({
+            name: data.name,
+            color: data.color || '#78909C',
+          });
         });
-      });
 
-      // ✅ Merge DEFAULT + USER categories (no duplicates)
-      const mergedMap = new Map<string, Category>();
+        const mergedMap = new Map<string, Category>();
 
-      DEFAULT_CATEGORIES.forEach((cat) => {
-        mergedMap.set(cat.name.toLowerCase(), cat);
-      });
+        DEFAULT_CATEGORIES.forEach((cat) => {
+          mergedMap.set(cat.name.toLowerCase(), cat);
+        });
 
-      userCategories.forEach((cat) => {
-        mergedMap.set(cat.name.toLowerCase(), cat);
-      });
+        userCategories.forEach((cat) => {
+          mergedMap.set(cat.name.toLowerCase(), cat);
+        });
 
-      // ✅ Convert to array
-      const merged = Array.from(mergedMap.values());
+        const merged = Array.from(mergedMap.values());
 
-      // ✅ Keep "Other" at the end
-      merged.sort((a, b) => {
-        if (a.name === 'Other') return 1;
-        if (b.name === 'Other') return -1;
-        return a.name.localeCompare(b.name);
-      });
+        merged.sort((a, b) => {
+          if (a.name === 'Other') return 1;
+          if (b.name === 'Other') return -1;
+          return a.name.localeCompare(b.name);
+        });
 
-      setCategories(merged);
-      setSelectedCategory('');
-    } catch (e) {
-      console.error(e);
-    }
-  };
+        setCategories(merged);
+        setSelectedCategory('');
+      } catch (e) {
+        console.error(e);
+      }
+    };
 
-  loadCategories();
-}, [visible]);
-
-
+    loadCategories();
+  }, [visible]);
 
   const extractAmount = (text: string): number | null => {
     const patterns = [
@@ -274,11 +204,10 @@ const ExpenseFabModal: React.FC<Props> = ({ visible, onClose }) => {
       food: ['food', 'restaurant', 'cafe', 'meal', 'pizza', 'burger', 'swiggy', 'zomato', 'lunch', 'dinner', 'breakfast'],
       entertainment: ['movie', 'cinema', 'netflix', 'spotify', 'game', 'concert', 'party'],
       education: ['course', 'college', 'school', 'udemy', 'book', 'tuition'],
-      bill: ['bill', 'electricity', 'water', 'gas', 'recharge', 'internet', 'phone'],
-      transport: ['uber', 'ola', 'bus', 'train', 'metro', 'fuel', 'petrol', 'taxi'],
+      utilities: ['bill', 'electricity', 'water', 'gas', 'recharge', 'internet', 'phone'],
+      travel: ['uber', 'ola', 'bus', 'train', 'metro', 'fuel', 'petrol', 'taxi'],
       shopping: ['amazon', 'flipkart', 'myntra', 'shopping', 'store'],
       health: ['doctor', 'hospital', 'medicine', 'pharmacy', 'gym'],
-      salary: ['salary', 'wage', 'income'],
     };
 
     for (const [category, keywords] of Object.entries(categoryKeywords)) {
@@ -292,119 +221,95 @@ const ExpenseFabModal: React.FC<Props> = ({ visible, onClose }) => {
     return null;
   };
 
-  const classifyWithAI = async (text: string, detectedType: 'income' | 'expense') => {
-    const categoryNames = categories.map(c => c.name.toLowerCase()).join(' | ');
-    
-    const prompt = `
-Classify this bank/UPI transaction message into one of the available categories.
+  const fetchAIInsights = async (sms: string) => {
+  if (sms.toLowerCase().includes('swiggy')) {
+    return { category: 'Food', counterparty: 'Swiggy' };
+  }
+  if (sms.toLowerCase().includes('amazon')) {
+    return { category: 'Shopping', counterparty: 'Amazon' };
+  }
+  if (sms.toLowerCase().includes('salary')) {
+    return { category: 'Other', counterparty: 'Company' };
+  }
+  return { category: null, counterparty: '' };
+};
 
-Message:
-"${text}"
 
-Available categories: ${categoryNames}
-
-The transaction type is: ${detectedType}
-
-Return ONLY valid JSON in this format:
-{
-  "category": "one of the available categories listed above"
-}
-
-Choose the most appropriate category from the available options. If none fit well, use "other".`;
-
-    try {
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 1000,
-          messages: [{ role: 'user', content: prompt }],
-        }),
-      });
-
-      const data = await res.json();
-      const content = data.content[0].text;
-
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        const aiResult = JSON.parse(jsonMatch[0]);
-        return aiResult.category;
-      }
-
-      return 'other';
-    } catch (err) {
-      console.error('AI classification failed', err);
-      return 'other';
-    }
-  };
 
   const handleSMSExtract = async () => {
-    if (!smsMessage.trim()) {
-      Alert.alert('Error', 'Please paste a message first');
+  if (!smsMessage.trim()) {
+    Alert.alert('Error', 'Please paste a message first');
+    return;
+  }
+
+  setLoadingAI(true);
+
+  try {
+    const amount = extractAmount(smsMessage);
+    if (!amount) {
+      Alert.alert('Error', 'Could not extract amount from the message');
+      setLoadingAI(false);
       return;
     }
 
-    setLoadingAI(true);
+    const detectedType = detectType(smsMessage);
+    let detectedCategory = detectCategoryBasic(smsMessage);
+let detectedCounterparty = '';
 
-    try {
-      // Step 1: Extract Amount
-      const amount = extractAmount(smsMessage);
-      if (!amount) {
-        Alert.alert('Error', 'Could not extract amount from the message');
-        setLoadingAI(false);
-        return;
-      }
+const aiResult = await fetchAIInsights(smsMessage);
 
-      // Step 2: Detect Type (Income/Expense)
-      const detectedType = detectType(smsMessage);
+if (!detectedCategory && aiResult.category) {
+  detectedCategory = aiResult.category;
+}
 
-      // Step 3: Detect Category
-      let detectedCategory = detectCategoryBasic(smsMessage);
-      
-     
-      // Match with user's categories
-      const matchedCategory = categories.find(
-        cat => cat.name.toLowerCase() === detectedCategory?.toLowerCase()
-      );
+detectedCounterparty = aiResult.counterparty || '';
 
-      const finalCategory = matchedCategory ? matchedCategory.name : (categories.find(cat => cat.name === 'Other')?.name || 'Other');
 
-      // Save to database
-      const user = auth.currentUser;
-      if (!user) {
-        Alert.alert('Error', 'User not authenticated');
-        setLoadingAI(false);
-        return;
-      }
+    // Normalize category with user categories
+    const matchedCategory = categories.find(
+      cat => cat.name.toLowerCase() === detectedCategory?.toLowerCase()
+    );
 
-      await addDoc(collection(db1, 'users', user.uid, 'transactions'), {
-        type: detectedType,
-        amount: amount,
-        category: finalCategory,
-        note: smsMessage.substring(0, 150),
-        createdAt: serverTimestamp(),
-      });
+    const finalCategory =
+      matchedCategory?.name ||
+      categories.find(cat => cat.name === 'Other')?.name ||
+      'Other';
 
-      // Store extracted data for display
-      setExtractedData({
-        amount,
-        type: detectedType,
-        category: finalCategory,
-        note: smsMessage.substring(0, 150),
-      });
-
+    const user = auth.currentUser;
+    if (!user) {
+      Alert.alert('Error', 'User not authenticated');
       setLoadingAI(false);
-      setInputMode('result');
-
-    } catch (error) {
-      console.error('SMS extraction error:', error);
-      Alert.alert('Error', 'Failed to process and save the transaction');
-      setLoadingAI(false);
+      return;
     }
-  };
+
+    await addDoc(collection(db1, 'users', user.uid, 'transactions'), {
+      type: detectedType,
+      amount,
+      category: finalCategory,
+      note: smsMessage.substring(0, 150),
+      counterparty: detectedCounterparty || '',
+      date: transactionDate,
+      createdAt: serverTimestamp(),
+    });
+
+    setExtractedData({
+      amount,
+      type: detectedType,
+      category: finalCategory,
+      note: smsMessage.substring(0, 150),
+      counterparty: detectedCounterparty || '',
+      date: new Date(),
+    });
+
+    setInputMode('result');
+  } catch (error) {
+    console.error(error);
+    Alert.alert('Error', 'Failed to process transaction');
+  } finally {
+    setLoadingAI(false);
+  }
+};
+
 
   const submitTransaction = async () => {
     if (!amountRef.current || !selectedCategory) {
@@ -415,29 +320,25 @@ Choose the most appropriate category from the available options. If none fit wel
     if (!user) return;
 
     await addDoc(collection(db1, 'users', user.uid, 'transactions'), {
-      type: modalType,
+      type: transactionType,
       amount: Number(amountRef.current),
       category: selectedCategory,
       note,
+      
+      date: transactionDate,
+      counterparty,
       createdAt: serverTimestamp(),
     });
 
-    closeForm();
+    // Close modal directly without showing result screen
+    closeModal();
   };
 
+  
+
   const getCategoryColor = (categoryName: string): string => {
-    const colorMap: { [key: string]: string } = {
-      food: '#FF6B6B',
-      entertainment: '#4ECDC4',
-      education: '#45B7D1',
-      bill: '#FFA07A',
-      transport: '#98D8C8',
-      shopping: '#F7DC6F',
-      health: '#BB8FCE',
-      salary: '#52C41A',
-      other: '#78909C',
-    };
-    return colorMap[categoryName.toLowerCase()] || '#78909C';
+    const cat = categories.find(c => c.name.toLowerCase() === categoryName.toLowerCase());
+    return cat?.color || '#78909C';
   };
 
   return (
@@ -446,46 +347,14 @@ Choose the most appropriate category from the available options. If none fit wel
       animationType={Platform.OS === 'ios' ? 'slide' : 'none'}
       transparent
     >
-      <View style={[styles.overlay, !modalType && styles.overlayCentered]}>
-        <View style={[styles.modal, !modalType && styles.modalCentered]}>
+      <View style={[styles.overlay, !inputMode && styles.overlayCentered]}>
+        <View style={[styles.modal, !inputMode && styles.modalCentered]}>
           <View style={styles.modalHandle} />
 
-          {/* Initial Type Selection */}
-          {!modalType && (
-            <View style={styles.fabContainer}>
-              <Text style={styles.fabTitle}>What would you like to add?</Text>
-              <View style={styles.fabButtons}>
-                <TouchableOpacity
-                  style={styles.fabWrapper}
-                  onPress={() => openTypeSelection('expense')}
-                  activeOpacity={0.8}
-                >
-                  <View style={[styles.fab, { backgroundColor: '#EF4444' }]}>
-                    <Text style={styles.fabText}>💵</Text>
-                  </View>
-                  <Text style={styles.fabLabel}>Expense</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={styles.fabWrapper}
-                  onPress={() => openTypeSelection('income')}
-                  activeOpacity={0.8}
-                >
-                  <View style={[styles.fab, { backgroundColor: '#10B981' }]}>
-                    <Text style={styles.fabText}>💳</Text>
-                  </View>
-                  <Text style={styles.fabLabel}>Income</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          )}
-
-          {/* Input Mode Selection */}
-          {modalType && inputMode === 'choice' && (
+          {/* Initial Choice: Form or SMS */}
+          {!inputMode && (
             <View style={styles.choiceContainer}>
-              <Text style={styles.choiceTitle}>
-                How would you like to add this {modalType}?
-              </Text>
+              <Text style={styles.choiceTitle}>Add Transaction</Text>
               
               <TouchableOpacity
                 style={styles.choiceOption}
@@ -496,9 +365,9 @@ Choose the most appropriate category from the available options. If none fit wel
                   <Text style={styles.choiceIcon}>📝</Text>
                 </View>
                 <View style={styles.choiceTextContainer}>
-                  <Text style={styles.choiceOptionTitle}>Fill Form Manually</Text>
+                  <Text style={styles.choiceOptionTitle}>Manual Entry</Text>
                   <Text style={styles.choiceOptionSubtitle}>
-                    Enter amount, category, and notes
+                    Fill in transaction details manually
                   </Text>
                 </View>
                 <Text style={styles.choiceArrow}>→</Text>
@@ -513,22 +382,18 @@ Choose the most appropriate category from the available options. If none fit wel
                   <Text style={styles.choiceIcon}>📱</Text>
                 </View>
                 <View style={styles.choiceTextContainer}>
-                  <Text style={styles.choiceOptionTitle}>Read from SMS</Text>
+                  <Text style={styles.choiceOptionTitle}>SMS Auto-Extract</Text>
                   <Text style={styles.choiceOptionSubtitle}>
-                    AI-powered SMS transaction parsing
+                    AI-powered transaction parsing from SMS
                   </Text>
                 </View>
                 <Text style={styles.choiceArrow}>→</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity style={styles.backButton} onPress={goBack}>
-                <Text style={styles.backButtonText}>← Back</Text>
               </TouchableOpacity>
             </View>
           )}
 
           {/* SMS Reading Mode */}
-          {modalType && inputMode === 'sms' && (
+          {inputMode === 'sms' && (
             <ScrollView
               keyboardShouldPersistTaps="always"
               showsVerticalScrollIndicator={false}
@@ -538,16 +403,16 @@ Choose the most appropriate category from the available options. If none fit wel
                 <View style={styles.smsIconCircle}>
                   <Text style={styles.smsIconText}>📱</Text>
                 </View>
-                <Text style={styles.smsTitle}>Read Transaction SMS</Text>
+                <Text style={styles.smsTitle}>Extract from SMS</Text>
                 <Text style={styles.smsSubtitle}>
-                  Paste your bank or UPI message below
+                  Paste your bank or UPI transaction message
                 </Text>
               </View>
 
               <View style={styles.inputContainer}>
                 <Text style={styles.label}>Transaction Message</Text>
                 <TextInput
-                  placeholder="Paste your bank/UPI SMS here...&#10;&#10;Example:&#10;₹500 debited from your account"
+                  placeholder="Paste your bank/UPI SMS here...&#10;&#10;Example:&#10;₹500 debited from your account via UPI"
                   placeholderTextColor="#999"
                   value={smsMessage}
                   onChangeText={setSmsMessage}
@@ -558,21 +423,13 @@ Choose the most appropriate category from the available options. If none fit wel
                 />
               </View>
 
-      
               <TouchableOpacity
-                style={[
-                  styles.submitBtn,
-                  modalType === 'expense'
-                    ? { backgroundColor: '#EF4444' }
-                    : { backgroundColor: '#10B981' },
-                  loadingAI && styles.submitBtnDisabled,
-                ]}
+                style={[styles.submitBtn, { backgroundColor: '#5B8DEF' }, loadingAI && styles.submitBtnDisabled]}
                 onPress={handleSMSExtract}
                 disabled={loadingAI}
               >
-                
                 <Text style={styles.submitText}>
-                  Extract Data
+                  {loadingAI ? '⏳ Extracting...' : '🔍 Extract & Save'}
                 </Text>
               </TouchableOpacity>
 
@@ -581,20 +438,145 @@ Choose the most appropriate category from the available options. If none fit wel
               </TouchableOpacity>
 
               <View style={styles.exampleContainer}>
-                <Text style={styles.exampleTitle}>💡 Example Messages:</Text>
-                <Text style={styles.exampleText}>
-                  • ₹500 debited for Swiggy order
-                </Text>
-                <Text style={styles.exampleText}>
-                  • Rs 2,500 paid to electricity bill
-                </Text>
-                <Text style={styles.exampleText}>
-                  • Salary credited ₹50,000
-                </Text>
-                <Text style={styles.exampleText}>
-                  • Spent INR 1,200 on Flipkart
-                </Text>
+                <Text style={styles.exampleTitle}>💡 Supported Messages:</Text>
+                <Text style={styles.exampleText}>• ₹500 debited for Swiggy order via UPI</Text>
+                <Text style={styles.exampleText}>• Rs 2,500 paid to electricity bill</Text>
+                <Text style={styles.exampleText}>• Salary credited ₹50,000</Text>
+                <Text style={styles.exampleText}>• Spent INR 1,200 on Flipkart via Card</Text>
               </View>
+            </ScrollView>
+          )}
+
+          {/* Manual Form Mode */}
+          {inputMode === 'form' && (
+            <ScrollView
+              keyboardShouldPersistTaps="always"
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.scrollContent}
+            >
+              {/* Type Toggle */}
+              <View style={styles.inputContainer}>
+                <Text style={styles.label}>Transaction Type</Text>
+                <View style={styles.typeToggleContainer}>
+                  <TouchableOpacity
+                    style={[
+                      styles.typeToggle,
+                      transactionType === 'expense' && { backgroundColor: '#EF4444' }
+                    ]}
+                    onPress={() => setTransactionType('expense')}
+                  >
+                    <Text style={[
+                      styles.typeToggleText,
+                      transactionType === 'expense' && styles.typeToggleTextActive
+                    ]}>💸 Expense</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.typeToggle,
+                      transactionType === 'income' && { backgroundColor: '#10B981' }
+                    ]}
+                    onPress={() => setTransactionType('income')}
+                  >
+                    <Text style={[
+                      styles.typeToggleText,
+                      transactionType === 'income' && styles.typeToggleTextActive
+                    ]}>💰 Income</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {/* Amount */}
+              <View style={styles.inputContainer}>
+                <Text style={styles.label}>Amount *</Text>
+                <View style={styles.amountInputWrapper}>
+                  <Text style={styles.currencySymbol}>₹</Text>
+                  <TextInput
+                    placeholder="0.00"
+                    placeholderTextColor="#999"
+                    keyboardType="number-pad"
+                    defaultValue={amountRef.current}
+                    onChangeText={(text) => (amountRef.current = text)}
+                    style={styles.amountInput}
+                  />
+                </View>
+              </View>
+
+              {/* Category */}
+              <View style={styles.section}>
+                <Text style={styles.label}>Category *</Text>
+                <View style={styles.categoryGrid}>
+                  {categories.map((cat) => (
+                    <TouchableOpacity
+                      key={cat.name}
+                      style={[
+                        styles.categoryChip,
+                        selectedCategory === cat.name && {
+                          backgroundColor: cat.color,
+                          borderColor: cat.color,
+                        },
+                      ]}
+                      onPress={() => setSelectedCategory(cat.name)}
+                    >
+                      <Text
+                        style={[
+                          styles.categoryChipText,
+                          selectedCategory === cat.name && styles.categoryChipTextSelected,
+                        ]}
+                      >
+                        {cat.name}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              {/* Note */}
+              <View style={styles.inputContainer}>
+                <Text style={styles.label}>Note (Optional)</Text>
+                <TextInput
+                  placeholder="Add details about this transaction..."
+                  placeholderTextColor="#999"
+                  value={note}
+                  onChangeText={setNote}
+                  style={[styles.input, styles.noteInput]}
+                  multiline
+                  numberOfLines={3}
+                />
+              </View>
+               {/* Paid To / Received From */}
+<View style={styles.inputContainer}>
+  <Text style={styles.label}>
+    {transactionType === 'expense' ? 'Paid To' : 'Received From'}
+  </Text>
+  <TextInput
+    placeholder={
+      transactionType === 'expense'
+        ? 'e.g. Swiggy, Landlord, Amazon'
+        : 'e.g. Company, Client, Friend'
+    }
+    placeholderTextColor="#999"
+    value={counterparty}
+    onChangeText={setCounterparty}
+    style={styles.input}
+  />
+</View>
+
+
+              <TouchableOpacity
+                style={[
+                  styles.submitBtn,
+                  { backgroundColor: transactionType === 'expense' ? '#EF4444' : '#10B981' }
+                ]}
+                onPress={submitTransaction}
+              >
+                <Text style={styles.submitText}>
+                  {transactionType === 'expense' ? 'Add Expense' : 'Add Income'}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.backButton} onPress={goBack}>
+                <Text style={styles.backButtonText}>← Back</Text>
+              </TouchableOpacity>
             </ScrollView>
           )}
 
@@ -608,7 +590,9 @@ Choose the most appropriate category from the available options. If none fit wel
                 <View style={[styles.resultIconCircle, {
                   backgroundColor: extractedData.type === 'income' ? '#D1FAE5' : '#FEE2E2'
                 }]}>
-                  
+                  <Text style={styles.resultIconText}>
+                    {extractedData.type === 'income' ? '💰' : '💸'}
+                  </Text>
                 </View>
                 <Text style={styles.resultTitle}>Transaction Saved!</Text>
                 <Text style={styles.resultSubtitle}>
@@ -618,27 +602,36 @@ Choose the most appropriate category from the available options. If none fit wel
 
               <View style={styles.resultCard}>
                 <View style={styles.resultRow}>
-                  <Text style={styles.resultLabel}>Amount</Text>
-                  <Text style={styles.resultValue}>₹{extractedData.amount.toFixed(2)}</Text>
-                </View>
-
-                <View style={styles.resultDivider} />
-
-                <View style={styles.resultRow}>
-                  <Text style={styles.resultLabel}>Type</Text>
-                  <View style={[
-                    styles.resultBadge,
-                    { backgroundColor: extractedData.type === 'income' ? '#10B981' : '#EF4444' }
-                  ]}>
-                    <Text style={styles.resultBadgeText}>
-                      {extractedData.type === 'income' ? '💰 INCOME' : '💸 EXPENSE'}
+                  
+                    <Text style={styles.resultLabel}>Amount  </Text>
+                    <Text
+                      style={[
+                        styles.resultValue,
+                        { color: extractedData.type === 'income' ? '#10B981' : '#EF4444' }
+                      ]}
+                    >
+                      ₹{extractedData.amount.toLocaleString()}
                     </Text>
                   </View>
-                </View>
 
-                <View style={styles.resultDivider} />
+                  <View style={styles.resultDivider} />
 
-                <View style={styles.resultRow}>
+                  <View style={styles.resultDivider} />
+
+                  <View style={styles.resultRow}>
+                    <Text style={styles.resultLabel}>Type</Text>
+                    <Text
+                      style={[
+                        styles.resultInfo,
+                        { color: extractedData.type === 'income' ? '#10B981' : '#EF4444' }
+                      ]}
+                    >
+                      {extractedData.type.toUpperCase()}
+                    </Text>
+                  </View>
+
+
+                  <View style={styles.resultRow}>
                   <Text style={styles.resultLabel}>Category</Text>
                   <View style={[
                     styles.resultBadge,
@@ -650,6 +643,8 @@ Choose the most appropriate category from the available options. If none fit wel
                   </View>
                 </View>
 
+  
+
                 {extractedData.note && (
                   <>
                     <View style={styles.resultDivider} />
@@ -659,6 +654,21 @@ Choose the most appropriate category from the available options. If none fit wel
                     </View>
                   </>
                 )}
+
+                {!!extractedData.counterparty && (
+  <>
+    <View style={styles.resultDivider} />
+    <View style={styles.resultRow}>
+      <Text style={styles.resultLabel}>
+        {extractedData.type === 'expense' ? 'Paid To' : 'Received From'}
+      </Text>
+      <Text style={styles.resultInfo}>
+        {extractedData.counterparty}
+      </Text>
+    </View>
+  </>
+)}
+
               </View>
 
               <TouchableOpacity
@@ -666,42 +676,6 @@ Choose the most appropriate category from the available options. If none fit wel
                 onPress={closeModal}
               >
                 <Text style={styles.submitText}>Done</Text>
-              </TouchableOpacity>
-            </ScrollView>
-          )}
-
-          {/* Form Mode */}
-          {modalType && inputMode === 'form' && (
-            <ScrollView
-              keyboardShouldPersistTaps="always"
-              keyboardDismissMode="none"
-              showsVerticalScrollIndicator={false}
-              contentContainerStyle={styles.scrollContent}
-            >
-              <AmountInput amountRef={amountRef} />
-              <CategorySection
-                categories={categories}
-                selectedCategory={selectedCategory}
-                setSelectedCategory={setSelectedCategory}
-              />
-              <NoteInput note={note} setNote={setNote} />
-
-              <TouchableOpacity
-                style={[
-                  styles.submitBtn,
-                  modalType === 'expense'
-                    ? { backgroundColor: '#EF4444' }
-                    : { backgroundColor: '#10B981' },
-                ]}
-                onPress={submitTransaction}
-              >
-                <Text style={styles.submitText}>
-                  {modalType === 'expense' ? 'Add Expense' : 'Add Income'}
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity style={styles.backButton} onPress={goBack}>
-                <Text style={styles.backButtonText}>← Back</Text>
               </TouchableOpacity>
             </ScrollView>
           )}
@@ -723,8 +697,7 @@ const styles = StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.6)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: 'flex-end',
   },
   overlayCentered: {
     justifyContent: 'center',
@@ -733,9 +706,9 @@ const styles = StyleSheet.create({
   modal: {
     backgroundColor: '#FFFFFF',
     padding: 16,
-    borderRadius: 28,
-    maxHeight: '85%',
-    width: '90%',
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    maxHeight: '90%',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.1,
@@ -759,55 +732,12 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
   },
 
-  fabContainer: {
-    paddingVertical: 12,
-    marginBottom: 8,
-  },
-  fabTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#1a1a1a',
-    textAlign: 'center',
-    marginBottom: 28,
-    letterSpacing: 0.3,
-  },
-  fabButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingHorizontal: 12,
-  },
-  fabWrapper: {
-    alignItems: 'center',
-    gap: 12,
-  },
-  fab: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  fabText: {
-    fontSize: 32,
-  },
-  fabLabel: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#374151',
-    letterSpacing: 0.2,
-  },
-
   choiceContainer: {
     paddingVertical: 12,
     marginBottom: 8,
   },
   choiceTitle: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: '700',
     color: '#1a1a1a',
     textAlign: 'center',
@@ -818,9 +748,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#F9FAFB',
-    padding: 16,
+    padding: 18,
     borderRadius: 16,
-    marginBottom: 12,
+    marginBottom: 14,
     borderWidth: 1.5,
     borderColor: '#E5E7EB',
   },
@@ -914,7 +844,45 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
 
-  // Result Screen Styles
+  extractedBanner: {
+    backgroundColor: '#DBEAFE',
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 20,
+    borderLeftWidth: 4,
+    borderLeftColor: '#3B82F6',
+  },
+  extractedBannerText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1E40AF',
+    textAlign: 'center',
+  },
+
+  typeToggleContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#F3F4F6',
+    borderRadius: 12,
+    padding: 4,
+    gap: 8,
+  },
+  typeToggle: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    alignItems: 'center',
+    backgroundColor: 'transparent',
+  },
+  typeToggleText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#6B7280',
+  },
+  typeToggleTextActive: {
+    color: '#FFFFFF',
+  },
+
   resultHeader: {
     alignItems: 'center',
     marginBottom: 24,
@@ -966,6 +934,11 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#1F2937',
   },
+  resultInfo: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1F2937',
+  },
   resultBadge: {
     paddingHorizontal: 16,
     paddingVertical: 8,
@@ -992,12 +965,23 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     lineHeight: 20,
   },
+  resultTag: {
+    backgroundColor: '#E0E7FF',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  resultTagText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#4338CA',
+  },
 
   section: {
     marginBottom: 16,
   },
   inputContainer: {
-    marginBottom: 24,
+    marginBottom: 20,
   },
   label: {
     fontSize: 15,
@@ -1062,10 +1046,88 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
 
+  paymentGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  paymentChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1.5,
+    borderColor: '#E5E7EB',
+  },
+  paymentChipSelected: {
+    backgroundColor: '#5B8DEF',
+    borderColor: '#5B8DEF',
+  },
+  paymentChipText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#374151',
+  },
+  paymentChipTextSelected: {
+    color: '#FFFFFF',
+  },
+
   noteInput: {
-    height: 60,
+    height: 80,
     textAlignVertical: 'top',
-    paddingTop: 8,
+    paddingTop: 12,
+  },
+
+  tagInputContainer: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  tagInput: {
+    flex: 1,
+    backgroundColor: '#F9FAFB',
+    padding: 12,
+    borderRadius: 12,
+    fontSize: 15,
+    color: '#1F2937',
+    borderWidth: 1.5,
+    borderColor: '#E5E7EB',
+  },
+  addTagBtn: {
+    backgroundColor: '#5B8DEF',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 12,
+    justifyContent: 'center',
+  },
+  addTagBtnText: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  tagsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 12,
+  },
+  tag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E0E7FF',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 16,
+    gap: 6,
+  },
+  tagText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#4338CA',
+  },
+  tagRemove: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#6366F1',
   },
 
   submitBtn: {
@@ -1073,7 +1135,7 @@ const styles = StyleSheet.create({
     padding: 18,
     borderRadius: 16,
     alignItems: 'center',
-    marginTop: 0,
+    marginTop: 4,
     marginBottom: 0,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 3 },
@@ -1116,4 +1178,4 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-});
+}); 

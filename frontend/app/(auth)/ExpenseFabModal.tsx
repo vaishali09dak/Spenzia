@@ -36,6 +36,19 @@ interface ExtractedData {
   note: string;
 }
 
+const DEFAULT_CATEGORIES: Category[] = [
+  { name: 'Food', color: '#FF6B6B' },
+  { name: 'Travel', color: '#4ECDC4' },
+  { name: 'Shopping', color: '#F7DC6F' },
+  { name: 'Utilities', color: '#FFA07A' },
+  { name: 'Rent', color: '#98D8C8' },
+  { name: 'Health', color: '#BB8FCE' },
+  { name: 'Education', color: '#45B7D1' },
+  { name: 'Entertainment', color: '#64B5F6' },
+  { name: 'Other', color: '#78909C' },
+];
+
+
 const AmountInput: React.FC<{ amountRef: React.MutableRefObject<string> }> = ({ amountRef }) => (
   <View style={styles.inputContainer}>
     <Text style={styles.label}>Amount</Text>
@@ -160,44 +173,61 @@ const ExpenseFabModal: React.FC<Props> = ({ visible, onClose }) => {
   };
 
   useEffect(() => {
-    const loadCategories = async () => {
-      if (!visible) return;
+  if (!visible) return;
 
-      const user = auth.currentUser;
-      if (!user) return;
+  const loadCategories = async () => {
+    const user = auth.currentUser;
+    if (!user) return;
 
-      try {
-        const snap = await getDocs(
-          collection(db1, 'users', user.uid, 'categories')
-        );
+    try {
+      const snap = await getDocs(
+        collection(db1, 'users', user.uid, 'categories')
+      );
 
-        const list: Category[] = [];
+      const userCategories: Category[] = [];
 
-        snap.forEach((doc) => {
-          const data = doc.data();
-          if (!data?.name) return;
+      snap.forEach((doc) => {
+        const data = doc.data();
+        if (!data?.name) return;
 
-          list.push({
-            name: data.name,
-            color: '#78909C',
-          });
+        userCategories.push({
+          name: data.name,
+          color: data.color || '#78909C',
         });
+      });
 
-        list.sort((a, b) => {
-          if (a.name === 'Other') return 1;
-          if (b.name === 'Other') return -1;
-          return a.name.localeCompare(b.name);
-        });
+      // ✅ Merge DEFAULT + USER categories (no duplicates)
+      const mergedMap = new Map<string, Category>();
 
-        setCategories(list);
-        setSelectedCategory('');
-      } catch (e) {
-        console.error(e);
-      }
-    };
+      DEFAULT_CATEGORIES.forEach((cat) => {
+        mergedMap.set(cat.name.toLowerCase(), cat);
+      });
 
-    loadCategories();
-  }, [visible]);
+      userCategories.forEach((cat) => {
+        mergedMap.set(cat.name.toLowerCase(), cat);
+      });
+
+      // ✅ Convert to array
+      const merged = Array.from(mergedMap.values());
+
+      // ✅ Keep "Other" at the end
+      merged.sort((a, b) => {
+        if (a.name === 'Other') return 1;
+        if (b.name === 'Other') return -1;
+        return a.name.localeCompare(b.name);
+      });
+
+      setCategories(merged);
+      setSelectedCategory('');
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  loadCategories();
+}, [visible]);
+
+
 
   const extractAmount = (text: string): number | null => {
     const patterns = [

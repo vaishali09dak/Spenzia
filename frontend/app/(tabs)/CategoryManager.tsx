@@ -105,40 +105,49 @@ export default function CategoryManager() {
   if (!user) return;
 
   setLoading(true);
-  try {
-    const snap = await getDocs(
-      collection(db1, 'users', user.uid, 'categories')
-    );
 
-    // 🔹 STEP 1: Seed default categories ONLY if empty
+  try {
+    const colRef = collection(db1, 'users', user.uid, 'categories');
+
+    // 🔹 STEP 1: Read once
+    let snap = await getDocs(colRef);
+
+    // 🔹 STEP 2: Seed defaults if empty
     if (snap.empty) {
       for (const cat of DEFAULT_CATEGORIES) {
-        await setDoc(
-          doc(db1, 'users', user.uid, 'categories', cat.name),
-          {
-            name: cat.name,
-            createdAt: new Date(),
-          }
-        );
+        await setDoc(doc(colRef, cat.name), {
+          name: cat.name,
+          createdAt: new Date(),
+        });
       }
+
+      // 🔹 STEP 3: RE-FETCH after seeding
+      snap = await getDocs(colRef);
     }
 
-    // 🔹 STEP 2: Read categories (after seeding)
+    // 🔹 STEP 4: Read ALL categories from Firestore
     const remote: Category[] = [];
 
     snap.forEach((d) => {
-      const data = d.data() as any;
+      const data = d.data();
       if (!data?.name) return;
-
-      if (data.name.toLowerCase() === 'other') return;
 
       remote.push({
         id: d.id,
         name: data.name,
+        isOther: data.name.toLowerCase() === 'other',
       });
     });
 
-    const merged: Category[] = [...DEFAULT_CATEGORIES];
+    // 🔹 STEP 5: Merge defaults + custom safely
+    const merged: Category[] = [];
+
+    DEFAULT_CATEGORIES.forEach((def) => {
+      const match = remote.find(
+        (r) => r.name.toLowerCase() === def.name.toLowerCase()
+      );
+      merged.push(match ?? def);
+    });
 
     remote.forEach((r) => {
       const exists = merged.some(
@@ -154,6 +163,7 @@ export default function CategoryManager() {
     setLoading(false);
   }
 };
+
 
 
   useEffect(() => {

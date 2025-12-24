@@ -299,14 +299,15 @@ const ExpenseFabModal: React.FC<Props> = ({ visible, onClose }) => {
     let detectedCategory = detectCategoryBasic(smsMessage);
 let detectedCounterparty = '';
 
-const aiResult = await fetchAIInsights(smsMessage);
+let aiResult = { category: null, counterparty: '' };
 
-
-if (!detectedCategory && aiResult.category) {
+if (!detectedCategory) {
+  aiResult = await fetchAIInsights(smsMessage);
   detectedCategory = aiResult.category;
 }
 
 detectedCounterparty = aiResult.counterparty || '';
+
 
 
     // Normalize category with user categories

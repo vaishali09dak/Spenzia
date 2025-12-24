@@ -24,6 +24,7 @@ interface Props {
   onClose: () => void;
 }
 
+
 type Category = {
   name: string;
   color: string;
@@ -213,7 +214,8 @@ const ExpenseFabModal: React.FC<Props> = ({ visible, onClose }) => {
     for (const [category, keywords] of Object.entries(categoryKeywords)) {
       for (const keyword of keywords) {
         if (lowerText.includes(keyword)) {
-          return category;
+           return category.charAt(0).toUpperCase() + category.slice(1);
+
         }
       }
     }
@@ -222,17 +224,58 @@ const ExpenseFabModal: React.FC<Props> = ({ visible, onClose }) => {
   };
 
   const fetchAIInsights = async (sms: string) => {
-  if (sms.toLowerCase().includes('swiggy')) {
-    return { category: 'Food', counterparty: 'Swiggy' };
+  try {
+    const response = await fetch(
+      'https://api.openai.com/v1/chat/completions',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer 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',
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [
+            {
+              role: 'system',
+              content: 'Extract category (Food, Travel, Shopping, Utilities, Rent, Health, Education, Entertainment, Other) and counterparty from transaction. Respond only with JSON: {"category":"Food","counterparty":"Swiggy"}',
+            },
+            {
+              role: 'user',
+              content: sms,
+            },
+          ],
+          temperature: 0.3,
+          max_tokens: 100,
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      console.error('API Error:', response.status);
+      return { category: null, counterparty: '' };
+    }
+
+    const data = await response.json();
+    const aiText = data.choices?.[0]?.message?.content || '';
+    const jsonMatch = aiText.match(/\{[\s\S]*\}/);
+    
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]);
+      return {
+        category: parsed.category || null,
+        counterparty: parsed.counterparty || '',
+      };
+    }
+    
+    return { category: null, counterparty: '' };
+
+  } catch (error) {
+    console.error('AI Error:', error);
+    return { category: null, counterparty: '' };
   }
-  if (sms.toLowerCase().includes('amazon')) {
-    return { category: 'Shopping', counterparty: 'Amazon' };
-  }
-  if (sms.toLowerCase().includes('salary')) {
-    return { category: 'Other', counterparty: 'Company' };
-  }
-  return { category: null, counterparty: '' };
 };
+
 
 
 
@@ -257,6 +300,7 @@ const ExpenseFabModal: React.FC<Props> = ({ visible, onClose }) => {
 let detectedCounterparty = '';
 
 const aiResult = await fetchAIInsights(smsMessage);
+
 
 if (!detectedCategory && aiResult.category) {
   detectedCategory = aiResult.category;

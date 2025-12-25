@@ -65,6 +65,7 @@ export default function TabsLayout() {
       <Tabs.Screen name="CategoryManager" options={{ href: null }} />
       <Tabs.Screen name="savingGoals" options={{ href: null }} />
       <Tabs.Screen name="MonthlyReport" options={{ href: null }} />
+      <Tabs.Screen name="Alerts" options={{ href: null }} />
 
       {/* SETTINGS */}
       <Tabs.Screen

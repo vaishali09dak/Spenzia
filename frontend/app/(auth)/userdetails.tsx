@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import BackgroundDecor from "../../components/BackgroundDecor";
 
 import {
@@ -15,8 +15,8 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { auth, db1 } from "../../firebase";
-import { doc, setDoc, serverTimestamp } from "firebase/firestore";
-import { router } from "expo-router";
+import { doc, onSnapshot, setDoc, serverTimestamp } from "firebase/firestore";
+import { router, type Href } from "expo-router";
 
 export default function UserDetailsScreen() {
   const [name, setName] = useState("");
@@ -25,6 +25,30 @@ export default function UserDetailsScreen() {
   const [income, setIncome] = useState("");
   const [budget, setBudget] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const user = auth.currentUser;
+    if (!user) {
+      router.replace("/login" as Href);
+      return;
+    }
+
+    const unsub = onSnapshot(doc(db1, "users", user.uid), (snap) => {
+      const data: any = snap.data();
+      if (data?.fullName) {
+        router.replace("/" as Href);
+        return;
+      }
+
+      if (typeof data?.fullName === "string") setName(data.fullName);
+      if (typeof data?.phone === "string") setPhone(data.phone);
+      if (data?.age != null) setAge(String(data.age));
+      if (data?.monthlyIncome != null) setIncome(String(data.monthlyIncome));
+      if (data?.monthlyBudget != null) setBudget(String(data.monthlyBudget));
+    });
+
+    return unsub;
+  }, []);
 
   const handleContinue = async () => {
     // 🔍 Simple validation
@@ -47,17 +71,21 @@ export default function UserDetailsScreen() {
     try {
       setLoading(true);
 
-      await setDoc(doc(db1, "users", user.uid), {
-        fullName: name,
-        phone,
-        age: Number(age),
-        monthlyIncome: Number(income),
-        monthlyBudget: Number(budget),
-        createdAt: serverTimestamp(),
-      });
+      await setDoc(
+        doc(db1, "users", user.uid),
+        {
+          fullName: name,
+          phone,
+          age: Number(age),
+          monthlyIncome: Number(income),
+          monthlyBudget: Number(budget),
+          createdAt: serverTimestamp(),
+        },
+        { merge: true }
+      );
 
       // 🚀 Go to home
-      router.replace("/(tabs)");
+      router.replace("/" as Href);
     } catch (error: any) {
       Alert.alert("Error", error.message);
     } finally {

@@ -291,12 +291,20 @@ export default function HomeScreen() {
   />
   <MenuItem icon="trending-up-outline" label="Spending Insights"
   onPress={() => {closeMenu(); router.push('../(auth)/SpendingInsights')} } /> 
-  <MenuItem icon="alert-circle-outline" label="Alerts" />
+  <MenuItem
+    icon="alert-circle-outline"
+    label="Alerts"
+    onPress={() => {
+      closeMenu();
+      router.push("/(tabs)/Alerts" as any);
+    }}
+  />
 
 </Animated.View>
 
   </SafeAreaView>
 );
+
 }
 
 function MenuItem({ icon, label, onPress }: any) {

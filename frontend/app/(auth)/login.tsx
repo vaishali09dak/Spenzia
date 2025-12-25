@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, StyleSheet, Alert, TouchableOpacity, Dimensions, ScrollView } from 'react-native';
 import { Image } from 'expo-image';
 
-import { router } from 'expo-router';
+import { router, type Href } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -25,8 +25,15 @@ export default function LoginScreen() {
   const handleLogin = async () => {
     setLoading(true);
     try {
-      await signInWithEmailAndPassword(auth, email, password);
-       router.replace("/(tabs)");
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      await userCredential.user.reload();
+
+      if (!userCredential.user.emailVerified) {
+        router.replace("/verify-email" as Href);
+        return;
+      }
+
+      router.replace("/userdetails" as Href);
       // Firebase listener in useAuth will automatically update and redirect the user
     } catch (error: any) {
       Alert.alert('Login Failed', error.message);
@@ -104,7 +111,7 @@ export default function LoginScreen() {
         {/* Sign Up Link */}
         <View style={styles.signUpContainer}>
           <Text style={styles.signUpText}>Don&apos;t have an account? </Text>
-          <TouchableOpacity onPress={() => router.push('/(auth)/signup')}>
+          <TouchableOpacity onPress={() => router.push('/signup')}>
             <Text style={styles.signUpLink}>Sign Up</Text>
           </TouchableOpacity>
         </View>

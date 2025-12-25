@@ -2,9 +2,9 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, StyleSheet, Alert, TouchableOpacity, Dimensions, ScrollView } from 'react-native';
 import { Image } from 'expo-image';
-import { createUserWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../../firebase';
-import { router, type Href } from 'expo-router';
+import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -46,11 +46,7 @@ export default function SignUpScreen() {
         { merge: true }
       );
 
-      if (userCredential.user) {
-        await sendEmailVerification(userCredential.user);
-      }
-
-      router.replace('/verify-email' as Href);
+      router.replace('/(auth)/userdetails');
     } catch (error: any) {
       Alert.alert('Sign Up Failed', error?.message ?? 'Something went wrong');
     } finally {
@@ -140,7 +136,7 @@ export default function SignUpScreen() {
         {/* Sign In Link */}
         <View style={styles.signInContainer}>
           <Text style={styles.signInText}>Already have an account? </Text>
-          <TouchableOpacity onPress={() => router.push('/login')}>
+          <TouchableOpacity onPress={() => router.push('/(auth)/login')}>
             <Text style={styles.signInLink}>Log In</Text>
           </TouchableOpacity>
         </View>

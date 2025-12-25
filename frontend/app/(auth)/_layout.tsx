@@ -30,10 +30,6 @@ export default function RootLayout() {
           options={{ title: 'Welcome Back', headerShown: false }} 
         />
 
-        <Stack.Screen name="verify-email" />
-
-        <Stack.Screen name="userdetails" />
-
         {/* 4. Dashboard Screen (REQUIRED!) */}
         <Stack.Screen name="dashboard" />
        

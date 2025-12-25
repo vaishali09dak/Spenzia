@@ -296,7 +296,7 @@ export default function HomeScreen() {
     label="Alerts"
     onPress={() => {
       closeMenu();
-      router.push("/(tabs)/Alerts" as any);
+      router.push('/(tabs)/Alerts');
     }}
   />
 

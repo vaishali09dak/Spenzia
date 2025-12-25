@@ -9,6 +9,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Platform,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
@@ -69,8 +70,17 @@ async function scheduleLocalNotificationIfAvailable(params: {
       if (req.status !== "granted") return null;
     }
 
+    if (Platform.OS === "android") {
+      await Notifications.setNotificationChannelAsync("default", {
+        name: "default",
+        importance: Notifications.AndroidImportance.MAX,
+        sound: "default",
+      });
+    }
+
     const now = new Date();
-    const triggerDate = params.dueAt.getTime() <= now.getTime() + 30_000 ? new Date(now.getTime() + 60_000) : params.dueAt;
+    const triggerDate =
+      params.dueAt.getTime() <= now.getTime() + 30_000 ? new Date(now.getTime() + 60_000) : params.dueAt;
 
     const id = await Notifications.scheduleNotificationAsync({
       content: {
@@ -245,7 +255,11 @@ export default function Alerts() {
                 <Text style={styles.cardTitle}>Add Reminder</Text>
                 <Text style={styles.cardSubTitle}>Create bills, loan or EMI reminders</Text>
               </View>
-              <Ionicons name={composerOpen ? "chevron-up" : "chevron-down"} size={20} color="rgba(0,0,0,0.55)" />
+              <Ionicons
+                name={composerOpen ? "chevron-up" : "chevron-down"}
+                size={20}
+                color="rgba(0,0,0,0.55)"
+              />
             </TouchableOpacity>
 
             {composerOpen ? (
@@ -259,9 +273,7 @@ export default function Alerts() {
                         style={[styles.kindChip, active && styles.kindChipActive]}
                         onPress={() => setKind(k)}
                       >
-                        <Text style={[styles.kindChipText, active && styles.kindChipTextActive]}>
-                          {kindLabel(k)}
-                        </Text>
+                        <Text style={[styles.kindChipText, active && styles.kindChipTextActive]}>{kindLabel(k)}</Text>
                       </TouchableOpacity>
                     );
                   })}
@@ -341,7 +353,8 @@ export default function Alerts() {
               const dueLabel = due ? format(due, "dd MMM yyyy") : "-";
               const overdue = due ? due.getTime() < Date.now() : false;
 
-              const iconName = r.kind === "bill" ? "flash-outline" : r.kind === "loan" ? "cash-outline" : "card-outline";
+              const iconName =
+                r.kind === "bill" ? "flash-outline" : r.kind === "loan" ? "cash-outline" : "card-outline";
               const iconBg = overdue ? "#FFF1F2" : "#E8EFFF";
               const iconColor = overdue ? "#C62828" : PRIMARY;
 
@@ -358,7 +371,12 @@ export default function Alerts() {
                       {typeof r.amount === "number" ? ` • ₹${Number(r.amount).toLocaleString("en-IN")}` : ""}
                     </Text>
                     <View style={[styles.statusChip, overdue ? styles.statusChipOverdue : styles.statusChipUpcoming]}>
-                      <Text style={[styles.statusChipText, overdue ? styles.statusChipTextOverdue : styles.statusChipTextUpcoming]}>
+                      <Text
+                        style={[
+                          styles.statusChipText,
+                          overdue ? styles.statusChipTextOverdue : styles.statusChipTextUpcoming,
+                        ]}
+                      >
                         {overdue ? "Overdue" : "Upcoming"}
                       </Text>
                     </View>

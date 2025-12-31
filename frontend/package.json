@@ -11,8 +11,9 @@
     "lint": "expo lint"
   },
   "dependencies": {
+    "@emailjs/react-native": "^5.1.0",
     "@expo/vector-icons": "^15.0.3",
-    "@react-native-async-storage/async-storage": "2.2.0",
+    "@react-native-async-storage/async-storage": "^2.2.0",
     "@react-native-google-signin/google-signin": "^16.0.0",
     "@react-navigation/bottom-tabs": "^7.4.0",
     "@react-navigation/elements": "^2.6.3",
@@ -20,6 +21,7 @@
     "@react-navigation/native-stack": "^7.8.6",
     "async-storage": "^0.1.0",
     "date-fns": "^4.1.0",
+    "emailjs-com": "^3.2.0",
     "expo": "~54.0.30",
     "expo-auth-session": "~7.0.10",
     "expo-blur": "~15.0.8",
@@ -46,12 +48,15 @@
     "react-native": "0.81.5",
     "react-native-chart-kit": "^6.12.0",
     "react-native-gesture-handler": "~2.28.0",
+    "react-native-keyboard-aware-scroll-view": "^0.9.5",
     "react-native-reanimated": "~4.1.1",
     "react-native-safe-area-context": "~5.6.0",
     "react-native-screens": "~4.16.0",
+    "react-native-svg": "^15.15.1",
     "react-native-view-shot": "4.0.3",
     "react-native-web": "~0.21.0",
-    "react-native-worklets": "0.5.1"
+    "react-native-worklets": "0.5.1",
+    "undefined": "expo-auth-session/providers/google"
   },
   "devDependencies": {
     "@types/react": "~19.1.0",

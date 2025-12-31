@@ -93,19 +93,9 @@ const ExpenseFabModal: React.FC<Props> = ({ visible, onClose }) => {
   };
 
   const goBack = () => {
-    if (inputMode === 'result') {
+   
       closeModal();
-    } else if (inputMode === 'form' || inputMode === 'sms') {
-      setInputMode('choice');
-      setSelectedCategory('');
-      setNote('');
-      setSmsMessage('');
-      setExtractedData(null);
-      
-      amountRef.current = '';
-    } else if (inputMode === 'choice') {
-      setInputMode(null);
-    }
+   
   };
 
   useEffect(() => {

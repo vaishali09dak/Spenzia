@@ -8,10 +8,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import * as Google from 'expo-auth-session/providers/google'; // <-- add this
 
 
 import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth } from "../../firebase"; // Adjust path if your firebase.ts is elsewhere
+import { auth} from "../../firebase"; // Adjust path if your firebase.ts is elsewhere
 
 // <-- new import: Google sign-in component
 
@@ -21,6 +22,10 @@ export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const [request, response, promptAsync] = Google.useAuthRequest({
+  androidClientId: "YOUR_ANDROID_CLIENT_ID"
+});
 
   const handleLogin = async () => {
     setLoading(true);
@@ -33,6 +38,7 @@ export default function LoginScreen() {
     } finally {
       setLoading(false);
     }
+    
   };
 
   return (
@@ -108,6 +114,14 @@ export default function LoginScreen() {
             <Text style={styles.signUpLink}>Sign Up</Text>
           </TouchableOpacity>
         </View>
+        <TouchableOpacity
+                        style={[styles.button, { backgroundColor: '#1E3A5F', borderWidth: 1, borderColor: '#DDD', marginBottom: 20 }]}
+                        onPress={() => promptAsync()}
+                      >
+                        <Text style={{ color: 'white', fontSize: 16, fontWeight: '600' }}>
+                          Continue with Google
+                        </Text>
+                      </TouchableOpacity>
       </View>
       </ScrollView>
     </SafeAreaView>

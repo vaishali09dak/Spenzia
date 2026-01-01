@@ -93,19 +93,9 @@ const ExpenseFabModal: React.FC<Props> = ({ visible, onClose }) => {
   };
 
   const goBack = () => {
-    if (inputMode === 'result') {
+   
       closeModal();
-    } else if (inputMode === 'form' || inputMode === 'sms') {
-      setInputMode('choice');
-      setSelectedCategory('');
-      setNote('');
-      setSmsMessage('');
-      setExtractedData(null);
-      
-      amountRef.current = '';
-    } else if (inputMode === 'choice') {
-      setInputMode(null);
-    }
+   
   };
 
   useEffect(() => {
@@ -393,7 +383,12 @@ detectedCounterparty = aiResult.counterparty || '';
       transparent
     >
       <View style={[styles.overlay, !inputMode && styles.overlayCentered]}>
-        <View style={[styles.modal, !inputMode && styles.modalCentered]}>
+<View
+  style={[
+    styles.modal,
+    (!inputMode || inputMode === 'sms') && styles.modalCentered
+  ]}
+>
           <View style={styles.modalHandle} />
 
           {/* Initial Choice: Form or SMS */}
@@ -411,9 +406,9 @@ detectedCounterparty = aiResult.counterparty || '';
                 </View>
                 <View style={styles.choiceTextContainer}>
                   <Text style={styles.choiceOptionTitle}>Manual Entry</Text>
-                  <Text style={styles.choiceOptionSubtitle}>
+                  {/* <Text style={styles.choiceOptionSubtitle}>
                     Fill in transaction details manually
-                  </Text>
+                  </Text> */}
                 </View>
                 <Text style={styles.choiceArrow}>→</Text>
               </TouchableOpacity>
@@ -428,9 +423,9 @@ detectedCounterparty = aiResult.counterparty || '';
                 </View>
                 <View style={styles.choiceTextContainer}>
                   <Text style={styles.choiceOptionTitle}>SMS Auto-Extract</Text>
-                  <Text style={styles.choiceOptionSubtitle}>
+                  {/* <Text style={styles.choiceOptionSubtitle}>
                     AI-powered transaction parsing from SMS
-                  </Text>
+                  </Text> */}
                 </View>
                 <Text style={styles.choiceArrow}>→</Text>
               </TouchableOpacity>
@@ -443,6 +438,7 @@ detectedCounterparty = aiResult.counterparty || '';
               keyboardShouldPersistTaps="always"
               showsVerticalScrollIndicator={false}
               contentContainerStyle={styles.scrollContent}
+              style={{ flexGrow: 0 }} 
             >
               <View style={styles.smsHeader}>
                 <View style={styles.smsIconCircle}>
@@ -457,7 +453,7 @@ detectedCounterparty = aiResult.counterparty || '';
               <View style={styles.inputContainer}>
                 <Text style={styles.label}>Transaction Message</Text>
                 <TextInput
-                  placeholder="Paste your bank/UPI SMS here...&#10;&#10;Example:&#10;₹500 debited from your account via UPI"
+                  // placeholder="Paste your bank/UPI SMS here...&#10;&#10;Example:&#10;₹500 debited from your account via UPI"
                   placeholderTextColor="#999"
                   value={smsMessage}
                   onChangeText={setSmsMessage}
@@ -479,16 +475,16 @@ detectedCounterparty = aiResult.counterparty || '';
               </TouchableOpacity>
 
               <TouchableOpacity style={styles.backButton} onPress={goBack}>
-                <Text style={styles.backButtonText}>← Back</Text>
+                {/* <Text style={styles.backButtonText}>← Back</Text> */}
               </TouchableOpacity>
 
-              <View style={styles.exampleContainer}>
+              {/* <View style={styles.exampleContainer}>
                 <Text style={styles.exampleTitle}>💡 Supported Messages:</Text>
                 <Text style={styles.exampleText}>• ₹500 debited for Swiggy order via UPI</Text>
                 <Text style={styles.exampleText}>• Rs 2,500 paid to electricity bill</Text>
                 <Text style={styles.exampleText}>• Salary credited ₹50,000</Text>
                 <Text style={styles.exampleText}>• Spent INR 1,200 on Flipkart via Card</Text>
-              </View>
+              </View> */}
             </ScrollView>
           )}
 
@@ -532,7 +528,7 @@ detectedCounterparty = aiResult.counterparty || '';
 
               {/* Amount */}
               <View style={styles.inputContainer}>
-                <Text style={styles.label}>Amount *</Text>
+                <Text style={styles.label}>Amount</Text>
                 <View style={styles.amountInputWrapper}>
                   <Text style={styles.currencySymbol}>₹</Text>
                   <TextInput
@@ -548,7 +544,7 @@ detectedCounterparty = aiResult.counterparty || '';
 
               {/* Category */}
               <View style={styles.section}>
-                <Text style={styles.label}>Category *</Text>
+                <Text style={styles.label}>Category </Text>
                 <View style={styles.categoryGrid}>
                   {categories.map((cat) => (
                     <TouchableOpacity
@@ -610,7 +606,7 @@ detectedCounterparty = aiResult.counterparty || '';
               <TouchableOpacity
                 style={[
                   styles.submitBtn,
-                  { backgroundColor: transactionType === 'expense' ? '#EF4444' : '#10B981' }
+                  { backgroundColor: transactionType === 'expense' ?  '#1F305E' : '#1F305E' }
                 ]}
                 onPress={submitTransaction}
               >
@@ -620,7 +616,7 @@ detectedCounterparty = aiResult.counterparty || '';
               </TouchableOpacity>
 
               <TouchableOpacity style={styles.backButton} onPress={goBack}>
-                <Text style={styles.backButtonText}>← Back</Text>
+                {/* <Text style={styles.backButtonText}>Back</Text> */}
               </TouchableOpacity>
             </ScrollView>
           )}
@@ -742,29 +738,32 @@ const styles = StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.6)',
-    justifyContent: 'flex-end',
+    justifyContent: 'center',
+    alignItems: 'center', 
   },
   overlayCentered: {
     justifyContent: 'center',
     alignItems: 'center',
   },
   modal: {
-    backgroundColor: '#FFFFFF',
-    padding: 16,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    maxHeight: '90%',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 8,
-  },
+  backgroundColor: '#FFFFFF',
+  padding: 16,
+  borderRadius: 28,
+  width: '100%',          // 👈 IMPORTANT
+  maxWidth: '90%',        // 👈 modal width control
+  maxHeight: '80%',
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: -4 },
+  shadowOpacity: 0.1,
+  shadowRadius: 12,
+  elevation: 8,
+},
+
   modalCentered: {
-    width: '90%',
-    borderRadius: 28,
-    maxHeight: 'auto',
-  },
+  width: '90%',
+  maxHeight: undefined,   // 👈 removes unused space
+},
+
   modalHandle: {
     width: 40,
     height: 4,
@@ -774,7 +773,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   scrollContent: {
-    paddingBottom: 10,
+    paddingBottom: 12,
   },
 
   choiceContainer: {
@@ -865,10 +864,16 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   smsTextArea: {
-    minHeight: 120,
-    textAlignVertical: 'top',
-    paddingTop: 12,
-  },
+  minHeight: 90,        
+  maxHeight: 130,       
+  textAlignVertical: 'top',
+  paddingTop: 8,        
+  paddingBottom: 8,
+},
+smsContent: {
+  paddingBottom: 10,
+},
+
   
   exampleContainer: {
     backgroundColor: '#F3F4F6',
@@ -1026,14 +1031,19 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   inputContainer: {
-    marginBottom: 20,
-  },
+  marginBottom: 14,          
+  maxHeight: 160,            
+},
+
   label: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#424242',
-    marginBottom: 10,
-  },
+  fontSize: 17,          
+  fontWeight: '700',     
+  color: '#1F2937',      
+  marginBottom: 8, 
+  marginTop: 6,     
+  letterSpacing: 0.2,
+},
+
   input: {
     backgroundColor: '#F9FAFB',
     padding: 16,
@@ -1045,48 +1055,52 @@ const styles = StyleSheet.create({
   },
 
   amountInputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F9FAFB',
-    borderRadius: 14,
-    paddingHorizontal: 16,
-    borderWidth: 1.5,
-    borderColor: '#E5E7EB',
-  },
-  currencySymbol: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#5B8DEF',
-    marginRight: 8,
-  },
-  amountInput: {
-    flex: 1,
-    padding: 16,
-    fontSize: 24,
-    fontWeight: '600',
-    color: '#1F2937',
-  },
+  flexDirection: 'row',
+  alignItems: 'center',
+  backgroundColor: '#F9FAFB',
+  borderRadius: 12,         
+  paddingHorizontal: 12,    
+  borderWidth: 1.5,
+  borderColor: '#E5E7EB',
+},
 
-  categoryGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
+  currencySymbol: {
+  fontSize: 20,              
+  fontWeight: '700',
+  color: '#1F305E',          
+  marginRight: 6,
+},
+
+  amountInput: {
+  flex: 1,
+  paddingVertical: 10,      
+  paddingHorizontal: 6,
+  fontSize: 20,              
+  fontWeight: '600',
+  color: '#1F2937',
+},
+
+categoryGrid: {
+  flexDirection: 'row',
+  flexWrap: 'wrap',
+  gap: 6,                    
+},
+
   categoryChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 20,
-    backgroundColor: '#F9FAFB',
-    borderWidth: 1.5,
-    borderColor: '#E5E7EB',
-  },
-  categoryChipText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#374151',
-  },
+  paddingHorizontal: 12,     
+  paddingVertical: 8,      
+ borderRadius: 16,          
+  backgroundColor: '#F9FAFB',
+  borderWidth: 1.2,
+  borderColor: '#E5E7EB',
+},
+
+categoryChipText: {
+  fontSize: 13,              
+  fontWeight: '600',
+  color: '#374151',
+},
+
   categoryChipTextSelected: {
     color: '#FFFFFF',
   },
@@ -1117,15 +1131,17 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
 
-  noteInput: {
-    height: 80,
-    textAlignVertical: 'top',
-    paddingTop: 12,
-  },
+noteInput: {
+  height: 60,                
+  textAlignVertical: 'top',
+  paddingTop: 8,           
+},
+
 
   tagInputContainer: {
     flexDirection: 'row',
     gap: 8,
+    marginBottom: 12,  
   },
   tagInput: {
     flex: 1,
@@ -1136,6 +1152,7 @@ const styles = StyleSheet.create({
     color: '#1F2937',
     borderWidth: 1.5,
     borderColor: '#E5E7EB',
+    marginBottom: 12,  
   },
   addTagBtn: {
     backgroundColor: '#5B8DEF',
@@ -1176,17 +1193,18 @@ const styles = StyleSheet.create({
   },
 
   submitBtn: {
-    backgroundColor: '#64B5F6',
+    backgroundColor: '#05131fff',
     padding: 18,
-    borderRadius: 16,
+    borderRadius: 14,
     alignItems: 'center',
-    marginTop: 4,
+    marginTop: 12,
     marginBottom: 0,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 6,
+     paddingVertical: 14,     
   },
   submitBtnDisabled: {
     backgroundColor: '#BDBDBD',
@@ -1201,11 +1219,11 @@ const styles = StyleSheet.create({
   },
 
   backButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    alignItems: 'center',
-    marginTop: 12,
-  },
+  paddingVertical: 8,       
+  alignItems: 'center',
+  marginTop: 6,            
+},
+
   backButtonText: {
     color: '#5B8DEF',
     fontSize: 15,
@@ -1213,11 +1231,11 @@ const styles = StyleSheet.create({
   },
 
   closeButton: {
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    alignItems: 'center',
-    marginTop: 8,
-  },
+  paddingVertical: 10,       // ⬅ was 14
+  alignItems: 'center',
+  marginTop: 4,              // ⬅ was 8
+},
+
   closeButtonText: {
     color: '#757575',
     fontSize: 16,

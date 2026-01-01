@@ -9,11 +9,20 @@ import {
   StyleSheet,
   StatusBar,
   Dimensions,
+  Modal,
+  Alert,
+  TextInput,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { collection, query, orderBy, getDocs, where } from 'firebase/firestore';
 import { useNavigation } from '@react-navigation/native';
 import { auth, db1 } from '../../firebase';
+import {
+  doc,
+  setDoc,
+  deleteDoc,
+} from 'firebase/firestore';
+
 
 const { width } = Dimensions.get('window');
 type FeatherIconName = React.ComponentProps<typeof Feather>['name'];
@@ -44,6 +53,12 @@ const SpendingInsights = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [period, setPeriod] = useState<'week' | 'month' | 'year'>('month');
+const [budgets, setBudgets] = useState<Record<string, number>>({});
+const [budgetModalVisible, setBudgetModalVisible] = useState(false);
+const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+const [budgetInput, setBudgetInput] = useState('');
+
+
 
   const loadData = async () => {
     setLoading(true);
@@ -70,8 +85,10 @@ const SpendingInsights = () => {
   };
 
   useEffect(() => {
-    loadData();
-  }, []);
+  loadData();
+  loadBudgets();
+}, []);
+
 
   const handleRefresh = () => {
     setRefreshing(true);
@@ -170,6 +187,110 @@ const SpendingInsights = () => {
 
   return icons[normalizeCategoryLabel(category)] ?? 'more-horizontal';
 };
+
+const openBudgetModal = (category: string) => {
+  setSelectedCategory(category);
+  setBudgetInput('');
+  setBudgetModalVisible(true);
+};
+
+const saveBudget = async (spentAmount: number) => {
+  const value = Number(budgetInput);
+
+  if (!value || value <= 0) {
+    Alert.alert('Invalid Budget', 'Please enter a valid amount');
+    return;
+  }
+
+  if (value <= spentAmount) {
+    Alert.alert(
+      'Budget Too Low',
+      `You have already spent ${formatCurrency(spentAmount)}.\nBudget must be higher than this.`
+    );
+    return;
+  }
+
+  try {
+    const user = auth.currentUser;
+    if (!user || !selectedCategory) return;
+
+    // 🔥 Save to Firestore
+    await setDoc(
+      doc(db1, 'users', user.uid, 'budgets', selectedCategory),
+      { amount: value }
+    );
+
+    // ✅ Update local state
+    setBudgets(prev => ({
+      ...prev,
+      [selectedCategory]: value,
+    }));
+
+    setBudgetModalVisible(false);
+  } catch (err) {
+    Alert.alert('Error', 'Failed to save budget');
+    console.error(err);
+  }
+};
+const loadBudgets = async () => {
+  try {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    const budgetsRef = collection(db1, 'users', user.uid, 'budgets');
+    const snapshot = await getDocs(budgetsRef);
+
+    const loadedBudgets: Record<string, number> = {};
+    snapshot.forEach(doc => {
+      loadedBudgets[doc.id] = doc.data().amount;
+    });
+
+    setBudgets(loadedBudgets);
+  } catch (err) {
+    console.error('Error loading budgets:', err);
+  }
+};
+
+
+
+
+
+
+
+
+const removeBudget = (category: string) => {
+  Alert.alert(
+    'Remove Budget',
+    'Are you sure you want to remove this budget?',
+    [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Remove',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            const user = auth.currentUser;
+            if (!user) return;
+
+            await deleteDoc(
+              doc(db1, 'users', user.uid, 'budgets', category)
+            );
+
+            setBudgets(prev => {
+              const copy = { ...prev };
+              delete copy[category];
+              return copy;
+            });
+          } catch (err) {
+            Alert.alert('Error', 'Failed to remove budget');
+            console.error(err);
+          }
+        },
+      },
+    ]
+  );
+};
+
 
   if (loading) {
     return (
@@ -346,11 +467,110 @@ const SpendingInsights = () => {
                   <Text style={styles.percentageText}>
                     {percentage.toFixed(1)}% of total spending
                   </Text>
+                 {budgets[stat.category] ? (
+  <>
+    <Text style={styles.budgetText}>
+      Budget: {formatCurrency(budgets[stat.category])}
+    </Text>
+
+    <View style={styles.progressBarContainer}>
+      <View
+        style={[
+          styles.progressBar,
+          {
+            width: `${Math.min(
+              (stat.total / budgets[stat.category]) * 100,
+              100
+            )}%`,
+            backgroundColor:
+              stat.total > budgets[stat.category] ? '#FF3B30' : '#5B8EF5',
+          },
+        ]}
+      />
+    </View>
+
+    <Text style={styles.percentageText}>
+      {formatCurrency(stat.total)} / {formatCurrency(budgets[stat.category])}
+    </Text>
+
+    {/* ACTION BUTTONS */}
+    <View style={styles.budgetActions}>
+  <TouchableOpacity
+    style={styles.manageBudgetButton}
+    onPress={() => openBudgetModal(stat.category)}
+  >
+    <Text style={styles.manageBudgetText}>Manage Budget</Text>
+  </TouchableOpacity>
+
+  <TouchableOpacity
+    onPress={() => removeBudget(stat.category)}
+    style={{ padding: 8 }}
+  >
+    <Feather name="trash-2" size={18} color="#FF3B30" />
+  </TouchableOpacity>
+</View>
+
+  </>
+) : (
+  <TouchableOpacity
+    style={styles.addBudgetButton}
+    onPress={() => openBudgetModal(stat.category)}
+  >
+    <Text style={styles.addBudgetText}>+ Add Budget</Text>
+  </TouchableOpacity>
+)}
+
+
+
+
+
                 </View>
+
               );
             })
           )}
         </View>
+        <Modal
+  visible={budgetModalVisible}
+  transparent
+  animationType="fade"
+  onRequestClose={() => setBudgetModalVisible(false)}
+>
+  <View style={styles.modalOverlay}>
+    <View style={styles.modalCard}>
+      <Text style={styles.modalTitle}>
+        Budget for {selectedCategory}
+      </Text>
+
+      <TextInput
+        placeholder="Enter budget amount"
+        keyboardType="numeric"
+        value={budgetInput}
+        onChangeText={setBudgetInput}
+        style={styles.modalInput}
+      />
+
+      <View style={styles.modalActions}>
+        <TouchableOpacity onPress={() => setBudgetModalVisible(false)}>
+          <Text style={styles.modalCancelText}>Cancel</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+  style={styles.modalSave}
+  onPress={() =>
+    saveBudget(
+      categoryStats.find(c => c.category === selectedCategory)?.total || 0
+    )
+  }
+>
+  <Text style={styles.modalSaveText}>Save</Text>
+</TouchableOpacity>
+
+      </View>
+    </View>
+  </View>
+</Modal>
+
       </ScrollView>
     </View>
   );
@@ -654,4 +874,104 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     marginTop: 12,
   },
+  addBudgetButton: {
+  marginTop: 10,
+  paddingVertical: 10,
+  borderRadius: 10,
+  backgroundColor: '#E8EFFF',
+  alignItems: 'center',
+},
+
+addBudgetText: {
+  color: '#2C3E7C',
+  fontWeight: '600',
+},
+
+budgetText: {
+  marginTop: 8,
+  fontSize: 13,
+  fontWeight: '600',
+  color: '#2C3E7C',
+},
+modalOverlay: {
+  flex: 1,
+  justifyContent: 'center',
+  alignItems: 'center',
+  backgroundColor: 'rgba(0,0,0,0.15)', // 👈 VERY LIGHT
+},
+
+
+modalCard: {
+  width: '85%',
+  backgroundColor: '#FFFFFF',
+  borderRadius: 20,
+  padding: 20,
+},
+
+modalTitle: {
+  fontSize: 18,
+  fontWeight: '700',
+  color: '#2C3E7C',
+  marginBottom: 16,
+},
+
+modalInput: {
+  borderWidth: 1,
+  borderColor: '#E0E0E0',
+  borderRadius: 12,
+  padding: 12,
+  fontSize: 16,
+  marginBottom: 20,
+},
+
+modalActions: {
+  flexDirection: 'row',
+  justifyContent: 'flex-end',
+  gap: 12,
+},
+
+modalCancel: {
+  paddingVertical: 10,
+  paddingHorizontal: 16,
+},
+
+modalCancelText: {
+  color: '#8E8E93',
+  fontWeight: '600',
+},
+
+modalSave: {
+  paddingVertical: 10,
+  paddingHorizontal: 20,
+  backgroundColor: '#1F305E',
+  borderRadius: 10,
+},
+
+modalSaveText: {
+  color: '#FFFFFF',
+  fontWeight: '600',
+},
+budgetActions: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'space-between', // ⬅️ key line
+  marginTop: 12,
+},
+
+manageBudgetButton: {
+  flex: 1,                    // ⬅️ button expands properly
+  paddingVertical: 10,
+  paddingHorizontal: 8,      // ⬅️ text breathing space
+  borderRadius: 10,
+  backgroundColor: '#E8EFFF',
+  alignItems: 'center',
+},
+
+
+manageBudgetText: {
+  color: '#2C3E7C',
+  fontWeight: '600',
+},
+
+
 });

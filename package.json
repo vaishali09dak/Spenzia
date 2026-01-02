@@ -4,16 +4,26 @@
     "expo-auth-session": "^7.0.10",
     "expo-blur": "~15.0.8",
     "expo-constants": "~18.0.12",
+    "expo-dev-client": "~6.0.20",
     "expo-linear-gradient": "~15.0.8",
+    "expo-notifications": "~0.32.15",
     "expo-router": "^6.0.17",
     "firebase": "^12.6.0",
     "react-native-chart-kit": "^6.12.0",
     "react-native-safe-area-context": "^5.6.2",
     "react-native-screens": "^4.18.0",
-    "react-native-svg": "15.12.1"
+    "react-native-svg": "15.12.1",
+    "react": "19.1.0",
+    "react-native": "0.81.5"
   },
   "devDependencies": {
     "@types/react": "~19.1.10",
     "typescript": "~5.9.2"
+  },
+  "name": "Spenzia",
+  "version": "1.0.0",
+  "scripts": {
+    "android": "expo run:android",
+    "ios": "expo run:ios"
   }
 }

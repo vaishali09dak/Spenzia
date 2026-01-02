@@ -206,6 +206,16 @@ export default function SignUpScreen() {
               >
                 <Text style={styles.buttonText}>{loading ? "Loading..." : "Sign Up"}</Text>
               </TouchableOpacity>
+               
+               {/* Google Sign-In */}
+              <TouchableOpacity
+                style={[styles.button, { backgroundColor: '#1E3A5F', borderWidth: 1, borderColor: '#DDD', marginBottom: 20 }]}
+                onPress={() => promptAsync()}
+              >
+                <Text style={{ color: 'white', fontSize: 16, fontWeight: '600' }}>
+                  Continue with Google
+                </Text>
+              </TouchableOpacity>
 
               {/* Sign In Link */}
               <View style={styles.signInContainer}>
@@ -216,14 +226,14 @@ export default function SignUpScreen() {
               </View>
 
               {/* Google Sign-In */}
-              <TouchableOpacity
+              {/* <TouchableOpacity
                 style={[styles.button, { backgroundColor: '#1E3A5F', borderWidth: 1, borderColor: '#DDD', marginBottom: 20 }]}
                 onPress={() => promptAsync()}
               >
                 <Text style={{ color: 'white', fontSize: 16, fontWeight: '600' }}>
                   Continue with Google
                 </Text>
-              </TouchableOpacity>
+              </TouchableOpacity> */}
             </>
           ) : (
             <View style={{ alignItems: 'center', paddingVertical: 40 }}>
@@ -263,6 +273,6 @@ const styles = StyleSheet.create({
   buttonDisabled: { opacity: 0.6 },
   buttonText: { color: '#FFF', fontSize: 18, fontWeight: '600' },
   signInContainer: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 24 },
-  signInText: { fontSize: 14, color: '#666' },
-  signInLink: { fontSize: 14, color: '#1E3A5F', fontWeight: '600' },
+  signInText: { fontSize: 14, color: '#666' , marginTop:-32},
+  signInLink: { fontSize: 14, color: '#1E3A5F', fontWeight: '600' , marginTop:-27  },
 });

@@ -23,8 +23,7 @@
       },
 
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false,
-      "package": "com.anonymous.frontend"
+      "predictiveBackGestureEnabled": false
     },
     "web": {
       "output": "static",

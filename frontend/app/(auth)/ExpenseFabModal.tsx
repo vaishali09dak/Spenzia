@@ -1,5 +1,4 @@
 import React, { useState, useRef, useEffect } from 'react';
-
 import {
   View,
   Text,
@@ -11,9 +10,7 @@ import {
   Platform,
   Alert,
 } from 'react-native';
-
 import { addDoc, collection, getDocs, serverTimestamp } from 'firebase/firestore';
-
 import { auth, db1 } from '../../firebase';
 
 type ModalType = 'income' | 'expense' | null;
@@ -23,7 +20,6 @@ interface Props {
   visible: boolean;
   onClose: () => void;
 }
-
 
 type Category = {
   name: string;
@@ -51,8 +47,6 @@ const DEFAULT_CATEGORIES: Category[] = [
   { name: 'Other', color: '#78909C' },
 ];
 
-
-
 const ExpenseFabModal: React.FC<Props> = ({ visible, onClose }) => {
   const [inputMode, setInputMode] = useState<InputMode>(null);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -61,15 +55,18 @@ const ExpenseFabModal: React.FC<Props> = ({ visible, onClose }) => {
   const [smsMessage, setSmsMessage] = useState('');
   const [loadingAI, setLoadingAI] = useState(false);
   const [extractedData, setExtractedData] = useState<ExtractedData | null>(null);
-  
+
   // New fields
   const [transactionType, setTransactionType] = useState<'income' | 'expense'>('expense');
-  
   const [transactionDate, setTransactionDate] = useState(new Date());
   const [counterparty, setCounterparty] = useState('');
 
-
   const amountRef = useRef('');
+const scrollRef = useRef<ScrollView>(null);
+const noteRef = useRef<TextInput>(null);
+const counterpartyRef = useRef<TextInput>(null);
+const [noteY, setNoteY] = useState(0);
+const [partyY, setPartyY] = useState(0);
 
   const openForm = () => setInputMode('form');
   const openSMS = () => setInputMode('sms');
@@ -81,7 +78,6 @@ const ExpenseFabModal: React.FC<Props> = ({ visible, onClose }) => {
     setSmsMessage('');
     setExtractedData(null);
     setTransactionType('expense');
-    
     setTransactionDate(new Date());
     setCounterparty('');
     amountRef.current = '';
@@ -93,9 +89,7 @@ const ExpenseFabModal: React.FC<Props> = ({ visible, onClose }) => {
   };
 
   const goBack = () => {
-   
-      closeModal();
-   
+    closeModal();
   };
 
   useEffect(() => {
@@ -111,11 +105,9 @@ const ExpenseFabModal: React.FC<Props> = ({ visible, onClose }) => {
         );
 
         const userCategories: Category[] = [];
-
         snap.forEach((doc) => {
           const data = doc.data();
           if (!data?.name) return;
-
           userCategories.push({
             name: data.name,
             color: data.color || '#78909C',
@@ -123,17 +115,14 @@ const ExpenseFabModal: React.FC<Props> = ({ visible, onClose }) => {
         });
 
         const mergedMap = new Map<string, Category>();
-
         DEFAULT_CATEGORIES.forEach((cat) => {
           mergedMap.set(cat.name.toLowerCase(), cat);
         });
-
         userCategories.forEach((cat) => {
           mergedMap.set(cat.name.toLowerCase(), cat);
         });
 
         const merged = Array.from(mergedMap.values());
-
         merged.sort((a, b) => {
           if (a.name === 'Other') return 1;
           if (b.name === 'Other') return -1;
@@ -173,24 +162,20 @@ const ExpenseFabModal: React.FC<Props> = ({ visible, onClose }) => {
 
   const detectType = (text: string): 'income' | 'expense' => {
     const lowerText = text.toLowerCase();
-    
     const incomeKeywords = ['credited', 'salary', 'refund', 'received', 'deposit', 'income', 'bonus', 'payment received'];
     const expenseKeywords = ['debited', 'paid', 'spent', 'purchased', 'bought', 'withdrawn', 'payment to', 'sent to'];
-    
+
     for (const keyword of incomeKeywords) {
       if (lowerText.includes(keyword)) return 'income';
     }
-    
     for (const keyword of expenseKeywords) {
       if (lowerText.includes(keyword)) return 'expense';
     }
-    
     return 'expense';
   };
 
   const detectCategoryBasic = (text: string): string | null => {
     const lowerText = text.toLowerCase();
-    
     const categoryKeywords: { [key: string]: string[] } = {
       food: ['food', 'restaurant', 'cafe', 'meal', 'pizza', 'burger', 'swiggy', 'zomato', 'lunch', 'dinner', 'breakfast'],
       entertainment: ['movie', 'cinema', 'netflix', 'spotify', 'game', 'concert', 'party'],
@@ -204,153 +189,140 @@ const ExpenseFabModal: React.FC<Props> = ({ visible, onClose }) => {
     for (const [category, keywords] of Object.entries(categoryKeywords)) {
       for (const keyword of keywords) {
         if (lowerText.includes(keyword)) {
-           return category.charAt(0).toUpperCase() + category.slice(1);
-
+          return category.charAt(0).toUpperCase() + category.slice(1);
         }
       }
     }
-    
     return null;
   };
 
   const fetchAIInsights = async (sms: string) => {
-  try {
-    const response = await fetch(
-      'https://api.openai.com/v1/chat/completions',
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer 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',
-        },
-        body: JSON.stringify({
-          model: 'gpt-4o-mini',
-          messages: [
-            {
-              role: 'system',
-              content: 'Extract category (Food, Travel, Shopping, Utilities, Rent, Health, Education, Entertainment, Other) and counterparty from transaction. Respond only with JSON: {"category":"Food","counterparty":"Swiggy"}',
-            },
-            {
-              role: 'user',
-              content: sms,
-            },
-          ],
-          temperature: 0.3,
-          max_tokens: 100,
-        }),
-      }
-    );
+    try {
+      const response = await fetch(
+        'https://api.openai.com/v1/chat/completions',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer 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',
+          },
+          body: JSON.stringify({
+            model: 'gpt-4o-mini',
+            messages: [
+              {
+                role: 'system',
+                content: 'Extract category (Food, Travel, Shopping, Utilities, Rent, Health, Education, Entertainment, Other) and counterparty from transaction. Respond only with JSON: {"category":"Food","counterparty":"Swiggy"}',
+              },
+              {
+                role: 'user',
+                content: sms,
+              },
+            ],
+            temperature: 0.3,
+            max_tokens: 100,
+          }),
+        }
+      );
 
-    if (!response.ok) {
-      console.error('API Error:', response.status);
+      if (!response.ok) {
+        console.error('API Error:', response.status);
+        return { category: null, counterparty: '' };
+      }
+
+      const data = await response.json();
+      const aiText = data.choices?.[0]?.message?.content || '';
+      const jsonMatch = aiText.match(/\{[\s\S]*\}/);
+
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+        return {
+          category: parsed.category || null,
+          counterparty: parsed.counterparty || '',
+        };
+      }
+
+      return { category: null, counterparty: '' };
+    } catch (error) {
+      console.error('AI Error:', error);
       return { category: null, counterparty: '' };
     }
-
-    const data = await response.json();
-    const aiText = data.choices?.[0]?.message?.content || '';
-    const jsonMatch = aiText.match(/\{[\s\S]*\}/);
-    
-    if (jsonMatch) {
-      const parsed = JSON.parse(jsonMatch[0]);
-      return {
-        category: parsed.category || null,
-        counterparty: parsed.counterparty || '',
-      };
-    }
-    
-    return { category: null, counterparty: '' };
-
-  } catch (error) {
-    console.error('AI Error:', error);
-    return { category: null, counterparty: '' };
-  }
-};
-
-
-
+  };
 
   const handleSMSExtract = async () => {
-  if (!smsMessage.trim()) {
-    Alert.alert('Error', 'Please paste a message first');
-    return;
-  }
-
-  setLoadingAI(true);
-
-  try {
-    const amount = extractAmount(smsMessage);
-    if (!amount) {
-      Alert.alert('Error', 'Could not extract amount from the message');
-      setLoadingAI(false);
+    if (!smsMessage.trim()) {
+      Alert.alert('Error', 'Please paste a message first');
       return;
     }
 
-    const detectedType = detectType(smsMessage);
-    let detectedCategory = detectCategoryBasic(smsMessage);
-let detectedCounterparty = '';
+    setLoadingAI(true);
 
-let aiResult = { category: null, counterparty: '' };
+    try {
+      const amount = extractAmount(smsMessage);
+      if (!amount) {
+        Alert.alert('Error', 'Could not extract amount from the message');
+        setLoadingAI(false);
+        return;
+      }
 
-if (!detectedCategory) {
-  aiResult = await fetchAIInsights(smsMessage);
-  detectedCategory = aiResult.category;
-}
+      const detectedType = detectType(smsMessage);
+      let detectedCategory = detectCategoryBasic(smsMessage);
+      let detectedCounterparty = '';
+      let aiResult = { category: null, counterparty: '' };
 
-detectedCounterparty = aiResult.counterparty || '';
+      if (!detectedCategory) {
+        aiResult = await fetchAIInsights(smsMessage);
+        detectedCategory = aiResult.category;
+      }
 
+      detectedCounterparty = aiResult.counterparty || '';
 
+      // Normalize category with user categories
+      const matchedCategory = categories.find(
+        cat => cat.name.toLowerCase() === detectedCategory?.toLowerCase()
+      );
+      const finalCategory = matchedCategory?.name || categories.find(cat => cat.name === 'Other')?.name || 'Other';
 
-    // Normalize category with user categories
-    const matchedCategory = categories.find(
-      cat => cat.name.toLowerCase() === detectedCategory?.toLowerCase()
-    );
+      const user = auth.currentUser;
+      if (!user) {
+        Alert.alert('Error', 'User not authenticated');
+        setLoadingAI(false);
+        return;
+      }
 
-    const finalCategory =
-      matchedCategory?.name ||
-      categories.find(cat => cat.name === 'Other')?.name ||
-      'Other';
+      await addDoc(collection(db1, 'users', user.uid, 'transactions'), {
+        type: detectedType,
+        amount,
+        category: finalCategory,
+        note: smsMessage.substring(0, 150),
+        counterparty: detectedCounterparty || '',
+        date: transactionDate,
+        createdAt: serverTimestamp(),
+      });
 
-    const user = auth.currentUser;
-    if (!user) {
-      Alert.alert('Error', 'User not authenticated');
+      setExtractedData({
+        amount,
+        type: detectedType,
+        category: finalCategory,
+        note: smsMessage.substring(0, 150),
+        counterparty: detectedCounterparty || '',
+        date: new Date(),
+      });
+
+      setInputMode('result');
+    } catch (error) {
+      console.error(error);
+      Alert.alert('Error', 'Failed to process transaction');
+    } finally {
       setLoadingAI(false);
-      return;
     }
-
-    await addDoc(collection(db1, 'users', user.uid, 'transactions'), {
-      type: detectedType,
-      amount,
-      category: finalCategory,
-      note: smsMessage.substring(0, 150),
-      counterparty: detectedCounterparty || '',
-      date: transactionDate,
-      createdAt: serverTimestamp(),
-    });
-
-    setExtractedData({
-      amount,
-      type: detectedType,
-      category: finalCategory,
-      note: smsMessage.substring(0, 150),
-      counterparty: detectedCounterparty || '',
-      date: new Date(),
-    });
-
-    setInputMode('result');
-  } catch (error) {
-    console.error(error);
-    Alert.alert('Error', 'Failed to process transaction');
-  } finally {
-    setLoadingAI(false);
-  }
-};
-
+  };
 
   const submitTransaction = async () => {
     if (!amountRef.current || !selectedCategory) {
       Alert.alert('Error', 'Please fill amount and select category');
       return;
     }
+
     const user = auth.currentUser;
     if (!user) return;
 
@@ -359,7 +331,6 @@ detectedCounterparty = aiResult.counterparty || '';
       amount: Number(amountRef.current),
       category: selectedCategory,
       note,
-      
       date: transactionDate,
       counterparty,
       createdAt: serverTimestamp(),
@@ -368,8 +339,6 @@ detectedCounterparty = aiResult.counterparty || '';
     // Close modal directly without showing result screen
     closeModal();
   };
-
-  
 
   const getCategoryColor = (categoryName: string): string => {
     const cat = categories.find(c => c.name.toLowerCase() === categoryName.toLowerCase());
@@ -381,21 +350,22 @@ detectedCounterparty = aiResult.counterparty || '';
       visible={visible}
       animationType={Platform.OS === 'ios' ? 'slide' : 'none'}
       transparent
-    >
+     >
       <View style={[styles.overlay, !inputMode && styles.overlayCentered]}>
-<View
+        <View
   style={[
     styles.modal,
-    (!inputMode || inputMode === 'sms') && styles.modalCentered
+    inputMode ? styles.modalFull : styles.modalCentered,
   ]}
 >
+
           <View style={styles.modalHandle} />
 
           {/* Initial Choice: Form or SMS */}
           {!inputMode && (
             <View style={styles.choiceContainer}>
               <Text style={styles.choiceTitle}>Add Transaction</Text>
-              
+
               <TouchableOpacity
                 style={styles.choiceOption}
                 onPress={openForm}
@@ -406,9 +376,9 @@ detectedCounterparty = aiResult.counterparty || '';
                 </View>
                 <View style={styles.choiceTextContainer}>
                   <Text style={styles.choiceOptionTitle}>Manual Entry</Text>
-                  {/* <Text style={styles.choiceOptionSubtitle}>
+                  <Text style={styles.choiceOptionSubtitle}>
                     Fill in transaction details manually
-                  </Text> */}
+                  </Text>
                 </View>
                 <Text style={styles.choiceArrow}>→</Text>
               </TouchableOpacity>
@@ -423,9 +393,9 @@ detectedCounterparty = aiResult.counterparty || '';
                 </View>
                 <View style={styles.choiceTextContainer}>
                   <Text style={styles.choiceOptionTitle}>SMS Auto-Extract</Text>
-                  {/* <Text style={styles.choiceOptionSubtitle}>
-                    AI-powered transaction parsing from SMS
-                  </Text> */}
+                  <Text style={styles.choiceOptionSubtitle}>
+                    Save transactions directly from SMS
+                  </Text>
                 </View>
                 <Text style={styles.choiceArrow}>→</Text>
               </TouchableOpacity>
@@ -438,7 +408,6 @@ detectedCounterparty = aiResult.counterparty || '';
               keyboardShouldPersistTaps="always"
               showsVerticalScrollIndicator={false}
               contentContainerStyle={styles.scrollContent}
-              style={{ flexGrow: 0 }} 
             >
               <View style={styles.smsHeader}>
                 <View style={styles.smsIconCircle}>
@@ -453,7 +422,7 @@ detectedCounterparty = aiResult.counterparty || '';
               <View style={styles.inputContainer}>
                 <Text style={styles.label}>Transaction Message</Text>
                 <TextInput
-                  // placeholder="Paste your bank/UPI SMS here...&#10;&#10;Example:&#10;₹500 debited from your account via UPI"
+                  placeholder="Paste your bank/UPI SMS here...&#10;&#10;Example:&#10;₹500 debited from your account via UPI"
                   placeholderTextColor="#999"
                   value={smsMessage}
                   onChangeText={setSmsMessage}
@@ -475,26 +444,31 @@ detectedCounterparty = aiResult.counterparty || '';
               </TouchableOpacity>
 
               <TouchableOpacity style={styles.backButton} onPress={goBack}>
-                {/* <Text style={styles.backButtonText}>← Back</Text> */}
+                <Text style={styles.backButtonText}>← Back</Text>
               </TouchableOpacity>
 
-              {/* <View style={styles.exampleContainer}>
+              <View style={styles.exampleContainer}>
                 <Text style={styles.exampleTitle}>💡 Supported Messages:</Text>
                 <Text style={styles.exampleText}>• ₹500 debited for Swiggy order via UPI</Text>
                 <Text style={styles.exampleText}>• Rs 2,500 paid to electricity bill</Text>
                 <Text style={styles.exampleText}>• Salary credited ₹50,000</Text>
                 <Text style={styles.exampleText}>• Spent INR 1,200 on Flipkart via Card</Text>
-              </View> */}
+              </View>
             </ScrollView>
           )}
 
           {/* Manual Form Mode */}
           {inputMode === 'form' && (
-            <ScrollView
-              keyboardShouldPersistTaps="always"
-              showsVerticalScrollIndicator={false}
-              contentContainerStyle={styles.scrollContent}
-            >
+            
+
+           <ScrollView
+  ref={scrollRef}
+  keyboardShouldPersistTaps="handled"
+  showsVerticalScrollIndicator={false}
+  contentContainerStyle={{ paddingBottom: 300 }}
+>
+
+
               {/* Type Toggle */}
               <View style={styles.inputContainer}>
                 <Text style={styles.label}>Transaction Type</Text>
@@ -511,6 +485,7 @@ detectedCounterparty = aiResult.counterparty || '';
                       transactionType === 'expense' && styles.typeToggleTextActive
                     ]}>💸 Expense</Text>
                   </TouchableOpacity>
+
                   <TouchableOpacity
                     style={[
                       styles.typeToggle,
@@ -528,7 +503,7 @@ detectedCounterparty = aiResult.counterparty || '';
 
               {/* Amount */}
               <View style={styles.inputContainer}>
-                <Text style={styles.label}>Amount</Text>
+                <Text style={styles.label}>Amount *</Text>
                 <View style={styles.amountInputWrapper}>
                   <Text style={styles.currencySymbol}>₹</Text>
                   <TextInput
@@ -544,7 +519,7 @@ detectedCounterparty = aiResult.counterparty || '';
 
               {/* Category */}
               <View style={styles.section}>
-                <Text style={styles.label}>Category </Text>
+                <Text style={styles.label}>Category *</Text>
                 <View style={styles.categoryGrid}>
                   {categories.map((cat) => (
                     <TouchableOpacity
@@ -570,11 +545,16 @@ detectedCounterparty = aiResult.counterparty || '';
                   ))}
                 </View>
               </View>
-
+              
               {/* Note */}
-              <View style={styles.inputContainer}>
+              <View style={styles.inputContainer}
+              onLayout={(e) => setNoteY(e.nativeEvent.layout.y)}>
                 <Text style={styles.label}>Note (Optional)</Text>
                 <TextInput
+                ref={noteRef}
+  onFocus={() => {
+    scrollRef.current?.scrollTo({ y: noteY - 40, animated: true });
+  }}
                   placeholder="Add details about this transaction..."
                   placeholderTextColor="#999"
                   value={note}
@@ -584,29 +564,35 @@ detectedCounterparty = aiResult.counterparty || '';
                   numberOfLines={3}
                 />
               </View>
-               {/* Paid To / Received From */}
-<View style={styles.inputContainer}>
-  <Text style={styles.label}>
-    {transactionType === 'expense' ? 'Paid To' : 'Received From'}
-  </Text>
-  <TextInput
-    placeholder={
-      transactionType === 'expense'
-        ? 'e.g. Swiggy, Landlord, Amazon'
-        : 'e.g. Company, Client, Friend'
-    }
-    placeholderTextColor="#999"
-    value={counterparty}
-    onChangeText={setCounterparty}
-    style={styles.input}
-  />
-</View>
 
+              {/* Paid To / Received From */}
+              <View style={styles.inputContainer}
+              onLayout={(e) => setPartyY(e.nativeEvent.layout.y)}>
+                <Text style={styles.label}>
+                  {transactionType === 'expense' ? 'Paid To' : 'Received From'}
+                </Text>
+                <TextInput
+               ref={counterpartyRef}
+  onFocus={() => {
+    scrollRef.current?.scrollTo({ y: partyY - 40, animated: true });
+  }}
+                  placeholder={
+                    transactionType === 'expense'
+                      ? 'e.g. Swiggy, Landlord, Amazon'
+                      : 'e.g. Company, Client, Friend'
+                  }
+                  placeholderTextColor="#999"
+                  value={counterparty}
+                  onChangeText={setCounterparty}
+                  style={styles.input}
+                />
+              </View>
+              
 
               <TouchableOpacity
                 style={[
                   styles.submitBtn,
-                  { backgroundColor: transactionType === 'expense' ?  '#1F305E' : '#1F305E' }
+                  { backgroundColor: transactionType === 'expense' ? '#EF4444' : '#10B981' }
                 ]}
                 onPress={submitTransaction}
               >
@@ -616,9 +602,10 @@ detectedCounterparty = aiResult.counterparty || '';
               </TouchableOpacity>
 
               <TouchableOpacity style={styles.backButton} onPress={goBack}>
-                {/* <Text style={styles.backButtonText}>Back</Text> */}
+                <Text style={styles.backButtonText}>← Back</Text>
               </TouchableOpacity>
             </ScrollView>
+            
           )}
 
           {/* Result Display */}
@@ -628,9 +615,7 @@ detectedCounterparty = aiResult.counterparty || '';
               contentContainerStyle={styles.scrollContent}
             >
               <View style={styles.resultHeader}>
-                <View style={[styles.resultIconCircle, {
-                  backgroundColor: extractedData.type === 'income' ? '#D1FAE5' : '#FEE2E2'
-                }]}>
+                <View style={[styles.resultIconCircle, { backgroundColor: extractedData.type === 'income' ? '#D1FAE5' : '#FEE2E2' }]}>
                   <Text style={styles.resultIconText}>
                     {extractedData.type === 'income' ? '💰' : '💸'}
                   </Text>
@@ -643,48 +628,44 @@ detectedCounterparty = aiResult.counterparty || '';
 
               <View style={styles.resultCard}>
                 <View style={styles.resultRow}>
-                  
-                    <Text style={styles.resultLabel}>Amount  </Text>
-                    <Text
-                      style={[
-                        styles.resultValue,
-                        { color: extractedData.type === 'income' ? '#10B981' : '#EF4444' }
-                      ]}
-                    >
-                      ₹{extractedData.amount.toLocaleString()}
-                    </Text>
-                  </View>
+                  <Text style={styles.resultLabel}>Amount </Text>
+                  <Text
+                    style={[
+                      styles.resultValue,
+                      { color: extractedData.type === 'income' ? '#10B981' : '#EF4444' }
+                    ]}
+                  >
+                    ₹{extractedData.amount.toLocaleString()}
+                  </Text>
+                </View>
 
-                  <View style={styles.resultDivider} />
+                <View style={styles.resultDivider} />
+                <View style={styles.resultDivider} />
 
-                  <View style={styles.resultDivider} />
+                <View style={styles.resultRow}>
+                  <Text style={styles.resultLabel}>Type</Text>
+                  <Text
+                    style={[
+                      styles.resultInfo,
+                      { color: extractedData.type === 'income' ? '#10B981' : '#EF4444' }
+                    ]}
+                  >
+                    {extractedData.type.toUpperCase()}
+                  </Text>
+                </View>
 
-                  <View style={styles.resultRow}>
-                    <Text style={styles.resultLabel}>Type</Text>
-                    <Text
-                      style={[
-                        styles.resultInfo,
-                        { color: extractedData.type === 'income' ? '#10B981' : '#EF4444' }
-                      ]}
-                    >
-                      {extractedData.type.toUpperCase()}
-                    </Text>
-                  </View>
-
-
-                  <View style={styles.resultRow}>
+                <View style={styles.resultRow}>
                   <Text style={styles.resultLabel}>Category</Text>
-                  <View style={[
-                    styles.resultBadge,
-                    { backgroundColor: getCategoryColor(extractedData.category) }
-                  ]}>
+                  <View
+                    style={[
+                      styles.resultBadge,
+                      { backgroundColor: getCategoryColor(extractedData.category) }
+                    ]}>
                     <Text style={styles.resultBadgeText}>
                       {extractedData.category.toUpperCase()}
                     </Text>
                   </View>
                 </View>
-
-  
 
                 {extractedData.note && (
                   <>
@@ -697,19 +678,18 @@ detectedCounterparty = aiResult.counterparty || '';
                 )}
 
                 {!!extractedData.counterparty && (
-  <>
-    <View style={styles.resultDivider} />
-    <View style={styles.resultRow}>
-      <Text style={styles.resultLabel}>
-        {extractedData.type === 'expense' ? 'Paid To' : 'Received From'}
-      </Text>
-      <Text style={styles.resultInfo}>
-        {extractedData.counterparty}
-      </Text>
-    </View>
-  </>
-)}
-
+                  <>
+                    <View style={styles.resultDivider} />
+                    <View style={styles.resultRow}>
+                      <Text style={styles.resultLabel}>
+                        {extractedData.type === 'expense' ? 'Paid To' : 'Received From'}
+                      </Text>
+                      <Text style={styles.resultInfo}>
+                        {extractedData.counterparty}
+                      </Text>
+                    </View>
+                  </>
+                )}
               </View>
 
               <TouchableOpacity
@@ -738,32 +718,39 @@ const styles = StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.6)',
-    justifyContent: 'center',
-    alignItems: 'center', 
+
+    justifyContent: 'center',   // 🔴 center vertically
+  alignItems: 'center',   
   },
   overlayCentered: {
     justifyContent: 'center',
     alignItems: 'center',
   },
   modal: {
-  backgroundColor: '#FFFFFF',
-  padding: 16,
+    backgroundColor: '#FFFFFF',
+    padding: 16,
+    
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,     
+  },
+  modalFull: {
+  height: '90%',
+  width: '100%',
+  borderTopLeftRadius: 28,
+  borderTopRightRadius: 28,
+},
+
+modalCentered: {
+  width: 320,
+  maxHeight: '80%',       // ✅ FORCE SQUARE
   borderRadius: 28,
-  width: '100%',          // 👈 IMPORTANT
-  maxWidth: '90%',        // 👈 modal width control
-  maxHeight: '80%',
-  shadowColor: '#000',
-  shadowOffset: { width: 0, height: -4 },
-  shadowOpacity: 0.1,
-  shadowRadius: 12,
-  elevation: 8,
+  justifyContent: 'center',
 },
 
-  modalCentered: {
-  width: '90%',
-  maxHeight: undefined,   // 👈 removes unused space
-},
-
+  
   modalHandle: {
     width: 40,
     height: 4,
@@ -773,9 +760,8 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   scrollContent: {
-    paddingBottom: 12,
+    paddingBottom: 10,
   },
-
   choiceContainer: {
     paddingVertical: 12,
     marginBottom: 8,
@@ -834,7 +820,6 @@ const styles = StyleSheet.create({
     color: '#9CA3AF',
     marginLeft: 8,
   },
-
   smsHeader: {
     alignItems: 'center',
     marginBottom: 24,
@@ -864,17 +849,10 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   smsTextArea: {
-  minHeight: 90,        
-  maxHeight: 130,       
-  textAlignVertical: 'top',
-  paddingTop: 8,        
-  paddingBottom: 8,
-},
-smsContent: {
-  paddingBottom: 10,
-},
-
-  
+    minHeight: 120,
+    textAlignVertical: 'top',
+    paddingTop: 12,
+  },
   exampleContainer: {
     backgroundColor: '#F3F4F6',
     padding: 16,
@@ -893,7 +871,6 @@ smsContent: {
     marginBottom: 6,
     fontWeight: '500',
   },
-
   extractedBanner: {
     backgroundColor: '#DBEAFE',
     padding: 12,
@@ -908,7 +885,6 @@ smsContent: {
     color: '#1E40AF',
     textAlign: 'center',
   },
-
   typeToggleContainer: {
     flexDirection: 'row',
     backgroundColor: '#F3F4F6',
@@ -932,7 +908,6 @@ smsContent: {
   typeToggleTextActive: {
     color: '#FFFFFF',
   },
-
   resultHeader: {
     alignItems: 'center',
     marginBottom: 24,
@@ -945,300 +920,278 @@ smsContent: {
     justifyContent: 'center',
     marginBottom: 16,
   },
-  resultIconText: {
-    fontSize: 48,
-  },
-  resultTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#212121',
-    marginBottom: 6,
-  },
-  resultSubtitle: {
-    fontSize: 14,
-    color: '#757575',
-    fontWeight: '400',
-    textAlign: 'center',
-  },
-  resultCard: {
-    backgroundColor: '#F9FAFB',
-    padding: 20,
-    borderRadius: 16,
-    marginBottom: 20,
-    borderWidth: 1.5,
-    borderColor: '#E5E7EB',
-  },
-  resultRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 8,
-  },
-  resultLabel: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#6B7280',
-  },
-  resultValue: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#1F2937',
-  },
-  resultInfo: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1F2937',
-  },
-  resultBadge: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 12,
-  },
-  resultBadgeText: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-    fontSize: 13,
-    letterSpacing: 0.5,
-  },
-  resultDivider: {
-    height: 1,
-    backgroundColor: '#E5E7EB',
-    marginVertical: 12,
-  },
-  resultNoteContainer: {
-    paddingTop: 8,
-  },
-  resultNote: {
-    fontSize: 14,
-    color: '#4B5563',
-    marginTop: 8,
-    fontStyle: 'italic',
-    lineHeight: 20,
-  },
-  resultTag: {
-    backgroundColor: '#E0E7FF',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
-  },
-  resultTagText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#4338CA',
-  },
-
-  section: {
-    marginBottom: 16,
-  },
-  inputContainer: {
-  marginBottom: 14,          
-  maxHeight: 160,            
+resultIconText: {
+fontSize: 48,
 },
-
-  label: {
-  fontSize: 17,          
-  fontWeight: '700',     
-  color: '#1F2937',      
-  marginBottom: 8, 
-  marginTop: 6,     
-  letterSpacing: 0.2,
+resultTitle: {
+fontSize: 24,
+fontWeight: '700',
+color: '#212121',
+marginBottom: 6,
 },
-
-  input: {
-    backgroundColor: '#F9FAFB',
-    padding: 16,
-    borderRadius: 14,
-    fontSize: 16,
-    color: '#1F2937',
-    borderWidth: 1.5,
-    borderColor: '#E5E7EB',
-  },
-
-  amountInputWrapper: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  backgroundColor: '#F9FAFB',
-  borderRadius: 12,         
-  paddingHorizontal: 12,    
-  borderWidth: 1.5,
-  borderColor: '#E5E7EB',
+resultSubtitle: {
+fontSize: 14,
+color: '#757575',
+fontWeight: '400',
+textAlign: 'center',
 },
-
-  currencySymbol: {
-  fontSize: 20,              
-  fontWeight: '700',
-  color: '#1F305E',          
-  marginRight: 6,
+resultCard: {
+backgroundColor: '#F9FAFB',
+padding: 20,
+borderRadius: 16,
+marginBottom: 20,
+borderWidth: 1.5,
+borderColor: '#E5E7EB',
 },
-
-  amountInput: {
-  flex: 1,
-  paddingVertical: 10,      
-  paddingHorizontal: 6,
-  fontSize: 20,              
-  fontWeight: '600',
-  color: '#1F2937',
+resultRow: {
+flexDirection: 'row',
+justifyContent: 'space-between',
+alignItems: 'center',
+paddingVertical: 8,
 },
-
+resultLabel: {
+fontSize: 15,
+fontWeight: '600',
+color: '#6B7280',
+},
+resultValue: {
+fontSize: 28,
+fontWeight: '700',
+color: '#1F2937',
+},
+resultInfo: {
+fontSize: 16,
+fontWeight: '600',
+color: '#1F2937',
+},
+resultBadge: {
+paddingHorizontal: 16,
+paddingVertical: 8,
+borderRadius: 12,
+},
+resultBadgeText: {
+color: '#FFFFFF',
+fontWeight: '700',
+fontSize: 13,
+letterSpacing: 0.5,
+},
+resultDivider: {
+height: 1,
+backgroundColor: '#E5E7EB',
+marginVertical: 12,
+},
+resultNoteContainer: {
+paddingTop: 8,
+},
+resultNote: {
+fontSize: 14,
+color: '#4B5563',
+marginTop: 8,
+fontStyle: 'italic',
+lineHeight: 20,
+},
+resultTag: {
+backgroundColor: '#E0E7FF',
+paddingHorizontal: 12,
+paddingVertical: 6,
+borderRadius: 12,
+},
+resultTagText: {
+fontSize: 12,
+fontWeight: '600',
+color: '#4338CA',
+},
+section: {
+marginBottom: 16,
+},
+inputContainer: {
+marginBottom: 20,
+},
+label: {
+fontSize: 15,
+fontWeight: '600',
+color: '#424242',
+marginBottom: 10,
+},
+input: {
+backgroundColor: '#F9FAFB',
+padding: 16,
+borderRadius: 14,
+fontSize: 16,
+color: '#1F2937',
+borderWidth: 1.5,
+borderColor: '#E5E7EB',
+},
+amountInputWrapper: {
+flexDirection: 'row',
+alignItems: 'center',
+backgroundColor: '#F9FAFB',
+borderRadius: 14,
+paddingHorizontal: 16,
+borderWidth: 1.5,
+borderColor: '#E5E7EB',
+},
+currencySymbol: {
+fontSize: 24,
+fontWeight: '700',
+color: '#5B8DEF',
+marginRight: 8,
+},
+amountInput: {
+flex: 1,
+padding: 16,
+fontSize: 24,
+fontWeight: '600',
+color: '#1F2937',
+},
 categoryGrid: {
-  flexDirection: 'row',
-  flexWrap: 'wrap',
-  gap: 6,                    
+flexDirection: 'row',
+flexWrap: 'wrap',
+gap: 10,
 },
-
-  categoryChip: {
-  paddingHorizontal: 12,     
-  paddingVertical: 8,      
- borderRadius: 16,          
-  backgroundColor: '#F9FAFB',
-  borderWidth: 1.2,
-  borderColor: '#E5E7EB',
+categoryChip: {
+flexDirection: 'row',
+alignItems: 'center',
+paddingHorizontal: 16,
+paddingVertical: 12,
+borderRadius: 20,
+backgroundColor: '#F9FAFB',
+borderWidth: 1.5,
+borderColor: '#E5E7EB',
 },
-
 categoryChipText: {
-  fontSize: 13,              
-  fontWeight: '600',
-  color: '#374151',
+fontSize: 14,
+fontWeight: '600',
+color: '#374151',
 },
-
-  categoryChipTextSelected: {
-    color: '#FFFFFF',
-  },
-
-  paymentGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-  paymentChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 20,
-    backgroundColor: '#F9FAFB',
-    borderWidth: 1.5,
-    borderColor: '#E5E7EB',
-  },
-  paymentChipSelected: {
-    backgroundColor: '#5B8DEF',
-    borderColor: '#5B8DEF',
-  },
-  paymentChipText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#374151',
-  },
-  paymentChipTextSelected: {
-    color: '#FFFFFF',
-  },
-
+categoryChipTextSelected: {
+color: '#FFFFFF',
+},
+paymentGrid: {
+flexDirection: 'row',
+flexWrap: 'wrap',
+gap: 10,
+},
+paymentChip: {
+paddingHorizontal: 16,
+paddingVertical: 10,
+borderRadius: 20,
+backgroundColor: '#F9FAFB',
+borderWidth: 1.5,
+borderColor: '#E5E7EB',
+},
+paymentChipSelected: {
+backgroundColor: '#5B8DEF',
+borderColor: '#5B8DEF',
+},
+paymentChipText: {
+fontSize: 13,
+fontWeight: '600',
+color: '#374151',
+},
+paymentChipTextSelected: {
+color: '#FFFFFF',
+},
 noteInput: {
-  height: 60,                
-  textAlignVertical: 'top',
-  paddingTop: 8,           
+height: 80,
+textAlignVertical: 'top',
+paddingTop: 12,
 },
-
-
-  tagInputContainer: {
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 12,  
-  },
-  tagInput: {
-    flex: 1,
-    backgroundColor: '#F9FAFB',
-    padding: 12,
-    borderRadius: 12,
-    fontSize: 15,
-    color: '#1F2937',
-    borderWidth: 1.5,
-    borderColor: '#E5E7EB',
-    marginBottom: 12,  
-  },
-  addTagBtn: {
-    backgroundColor: '#5B8DEF',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 12,
-    justifyContent: 'center',
-  },
-  addTagBtnText: {
-    color: '#FFFFFF',
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  tagsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginTop: 12,
-  },
-  tag: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#E0E7FF',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 16,
-    gap: 6,
-  },
-  tagText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#4338CA',
-  },
-  tagRemove: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#6366F1',
-  },
-
-  submitBtn: {
-    backgroundColor: '#05131fff',
-    padding: 18,
-    borderRadius: 14,
-    alignItems: 'center',
-    marginTop: 12,
-    marginBottom: 0,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 6,
-     paddingVertical: 14,     
-  },
-  submitBtnDisabled: {
-    backgroundColor: '#BDBDBD',
-    shadowOpacity: 0,
-    elevation: 0,
-  },
-  submitText: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-    fontSize: 17,
-    letterSpacing: 0.5,
-  },
-
-  backButton: {
-  paddingVertical: 8,       
-  alignItems: 'center',
-  marginTop: 6,            
+tagInputContainer: {
+flexDirection: 'row',
+gap: 8,
 },
-
-  backButtonText: {
-    color: '#5B8DEF',
-    fontSize: 15,
-    fontWeight: '600',
-  },
-
-  closeButton: {
-  paddingVertical: 10,       // ⬅ was 14
-  alignItems: 'center',
-  marginTop: 4,              // ⬅ was 8
+tagInput: {
+flex: 1,
+backgroundColor: '#F9FAFB',
+padding: 12,
+borderRadius: 12,
+fontSize: 15,
+color: '#1F2937',
+borderWidth: 1.5,
+borderColor: '#E5E7EB',
 },
-
-  closeButtonText: {
-    color: '#757575',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-}); 
+addTagBtn: {
+backgroundColor: '#5B8DEF',
+paddingHorizontal: 20,
+paddingVertical: 12,
+borderRadius: 12,
+justifyContent: 'center',
+},
+addTagBtnText: {
+color: '#FFFFFF',
+fontWeight: '600',
+fontSize: 14,
+},
+tagsContainer: {
+flexDirection: 'row',
+flexWrap: 'wrap',
+gap: 8,
+marginTop: 12,
+},
+tag: {
+flexDirection: 'row',
+alignItems: 'center',
+backgroundColor: '#E0E7FF',
+paddingHorizontal: 12,
+paddingVertical: 8,
+borderRadius: 16,
+gap: 6,
+},
+tagText: {
+fontSize: 13,
+fontWeight: '600',
+color: '#4338CA',
+},
+tagRemove: {
+fontSize: 18,
+fontWeight: '700',
+color: '#6366F1',
+},
+submitBtn: {
+backgroundColor: '#64B5F6',
+padding: 18,
+borderRadius: 16,
+alignItems: 'center',
+marginTop: 4,
+marginBottom: 0,
+shadowColor: '#000',
+shadowOffset: { width: 0, height: 3 },
+shadowOpacity: 0.2,
+shadowRadius: 8,
+elevation: 6,
+},
+submitBtnDisabled: {
+backgroundColor: '#BDBDBD',
+shadowOpacity: 0,
+elevation: 0,
+},
+submitText: {
+color: '#FFFFFF',
+fontWeight: '700',
+fontSize: 17,
+letterSpacing: 0.5,
+},
+backButton: {
+paddingVertical: 12,
+paddingHorizontal: 24,
+alignItems: 'center',
+marginTop: 12,
+},
+backButtonText: {
+color: '#5B8DEF',
+fontSize: 15,
+fontWeight: '600',
+},
+closeButton: {
+paddingVertical: 14,
+paddingHorizontal: 24,
+alignItems: 'center',
+marginTop: 8,
+},
+closeButtonText: {
+color: '#757575',
+fontSize: 16,
+fontWeight: '600',
+},
+});

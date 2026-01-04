@@ -1,5 +1,15 @@
 {
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "3178e239-de3e-4a38-8553-93e991853398"
+      }
+    },
+    "android": {
+      "package": "com.khushidesai.spenzia"
+    }
+  },
   "android": {
-    "package": "com.vaishali_dak.spenzia"
+    "package": "com.spenzia.app"
   }
 }

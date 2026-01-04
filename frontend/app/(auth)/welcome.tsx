@@ -150,7 +150,7 @@ const createStyles = (width: number, height: number) => StyleSheet.create({
     maxWidth: 320,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 5,
+    marginTop: 15,
     marginBottom: 5,
     shadowColor: '#1E3A5F',
     shadowOffset: { width: 0, height: 4 },

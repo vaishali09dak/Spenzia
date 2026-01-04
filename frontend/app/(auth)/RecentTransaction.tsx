@@ -8,7 +8,8 @@ import {
   ActivityIndicator,
   StyleSheet,
   StatusBar,
-  Modal
+  Modal,
+  TextInput,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
@@ -17,6 +18,7 @@ import { auth, db1 } from '../../firebase';
 
 const RecentTransactions = () => {
   const navigation = useNavigation();
+const [searchQuery, setSearchQuery] = useState('');
 
   const [transactions, setTransactions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -60,9 +62,30 @@ const [detailVisible, setDetailVisible] = useState(false);
     loadData();
   };
 
-  const filteredTransactions = transactions.filter(t =>
-    filter === 'all' ? true : t.type === filter
-  );
+  const filteredTransactions = transactions.filter(t => {
+  // type filter
+  if (filter !== 'all' && t.type !== filter) return false;
+
+  if (!searchQuery.trim()) return true;
+
+  const query = searchQuery.toLowerCase();
+
+  const dateObj = t.createdAt?.toDate
+    ? t.createdAt.toDate()
+    : new Date(t.createdAt);
+
+  const searchableText = `
+    ${t.amount}
+    ${t.category}
+    ${t.counterparty}
+    ${t.note}
+    ${dateObj.toLocaleDateString()}
+    ${dateObj.toLocaleTimeString()}
+  `.toLowerCase();
+
+  return searchableText.includes(query);
+});
+
 
   const formatCurrency = (amount: number) =>
     `₹${amount.toLocaleString('en-IN')}`;
@@ -151,6 +174,17 @@ const [detailVisible, setDetailVisible] = useState(false);
             </TouchableOpacity>
           ))}
         </View>
+        <View style={styles.searchContainer}>
+  <Feather name="search" size={18} color="#8E8E93" />
+  <TextInput
+    placeholder="Search amount, category, note, date..."
+    value={searchQuery}
+    onChangeText={setSearchQuery}
+    style={styles.searchInput}
+    placeholderTextColor="#9CA3AF"
+  />
+</View>
+
 
         {/* TRANSACTION LIST */}
         <View style={styles.transactionList}>
@@ -588,5 +622,27 @@ closeModalText: {
   fontSize: 16,
   fontWeight: '700',
 },
+searchContainer: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  backgroundColor: '#FFFFFF',
+  borderRadius: 14,
+  paddingHorizontal: 14,
+  paddingVertical: 10,
+  marginBottom: 20,
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.06,
+  shadowRadius: 4,
+  elevation: 2,
+},
+
+searchInput: {
+  flex: 1,
+  marginLeft: 10,
+  fontSize: 15,
+  color: '#1F305E',
+},
+
 
 });

@@ -107,13 +107,6 @@ export default function LoginScreen() {
           <Text style={styles.buttonText}>{loading ? "Loading..." : "Log In"}</Text>
         </TouchableOpacity>
 
-        {/* Sign Up Link */}
-        <View style={styles.signUpContainer}>
-          <Text style={styles.signUpText}>Don&apos;t have an account? </Text>
-          <TouchableOpacity onPress={() => router.push('/(auth)/signup')}>
-            <Text style={styles.signUpLink}>Sign Up</Text>
-          </TouchableOpacity>
-        </View>
         <TouchableOpacity
                         style={[styles.button, { backgroundColor: '#1E3A5F', borderWidth: 1, borderColor: '#DDD', marginBottom: 20 }]}
                         onPress={() => promptAsync()}
@@ -122,6 +115,21 @@ export default function LoginScreen() {
                           Continue with Google
                         </Text>
                       </TouchableOpacity>
+        {/* Sign Up Link */}
+        <View style={styles.signUpContainer}>
+          <Text style={styles.signUpText}>Don&apos;t have an account? </Text>
+          <TouchableOpacity onPress={() => router.push('/(auth)/signup')}>
+            <Text style={styles.signUpLink}>Sign Up</Text>
+          </TouchableOpacity>
+        </View>
+        {/* <TouchableOpacity
+                        style={[styles.button, { backgroundColor: '#1E3A5F', borderWidth: 1, borderColor: '#DDD', marginBottom: 20 }]}
+                        onPress={() => promptAsync()}
+                      >
+                        <Text style={{ color: 'white', fontSize: 16, fontWeight: '600' }}>
+                          Continue with Google
+                        </Text>
+                      </TouchableOpacity> */}
       </View>
       </ScrollView>
     </SafeAreaView>
@@ -228,10 +236,12 @@ const styles = StyleSheet.create({
     marginTop: 24,
   },
   signUpText: {
+    marginTop:-28,
     fontSize: 14,
     color: '#666',
   },
   signUpLink: {
+    marginTop:-23,
     fontSize: 14,
     color: '#1E3A5F',
     fontWeight: '600',

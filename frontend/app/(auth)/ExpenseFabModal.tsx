@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
@@ -14,7 +15,7 @@ import { addDoc, collection, getDocs, serverTimestamp } from 'firebase/firestore
 import { auth, db1 } from '../../firebase';
 
 type ModalType = 'income' | 'expense' | null;
-type InputMode = 'choice' | 'form' | 'sms' | 'result' | null;
+type InputMode = 'choice' | 'form' | 'sms' | 'result' | 'file' | null;
 
 interface Props {
   visible: boolean;
@@ -25,6 +26,7 @@ type Category = {
   name: string;
   color: string;
 };
+
 
 interface ExtractedData {
   amount: number;
@@ -55,18 +57,17 @@ const ExpenseFabModal: React.FC<Props> = ({ visible, onClose }) => {
   const [smsMessage, setSmsMessage] = useState('');
   const [loadingAI, setLoadingAI] = useState(false);
   const [extractedData, setExtractedData] = useState<ExtractedData | null>(null);
-
-  // New fields
   const [transactionType, setTransactionType] = useState<'income' | 'expense'>('expense');
   const [transactionDate, setTransactionDate] = useState(new Date());
   const [counterparty, setCounterparty] = useState('');
 
   const amountRef = useRef('');
-const scrollRef = useRef<ScrollView>(null);
-const noteRef = useRef<TextInput>(null);
-const counterpartyRef = useRef<TextInput>(null);
-const [noteY, setNoteY] = useState(0);
-const [partyY, setPartyY] = useState(0);
+  const scrollRef = useRef<ScrollView>(null);
+  const noteRef = useRef<TextInput>(null);
+  const counterpartyRef = useRef<TextInput>(null);
+
+  const [noteY, setNoteY] = useState(0);
+  const [partyY, setPartyY] = useState(0);
 
   const openForm = () => setInputMode('form');
   const openSMS = () => setInputMode('sms');
@@ -100,11 +101,9 @@ const [partyY, setPartyY] = useState(0);
       if (!user) return;
 
       try {
-        const snap = await getDocs(
-          collection(db1, 'users', user.uid, 'categories')
-        );
-
+        const snap = await getDocs(collection(db1, 'users', user.uid, 'categories'));
         const userCategories: Category[] = [];
+
         snap.forEach((doc) => {
           const data = doc.data();
           if (!data?.name) return;
@@ -144,7 +143,7 @@ const [partyY, setPartyY] = useState(0);
       /(?:₹|rs\.?|inr)\s?([\d,]+(?:\.\d+)?)/i,
       /([\d,]+(?:\.\d+)?)\s*(?:₹|rs\.?|rupees?)/i,
       /(?:amount|paid|received|spent|debited|credited)[\s:]*(?:₹|rs\.?)?\s*([\d,]+(?:\.\d+)?)/i,
-      /([\d,]+(?:\.\d+)?)/
+      /([\d,]+(?:\.\d+)?)/,
     ];
 
     for (const pattern of patterns) {
@@ -162,8 +161,26 @@ const [partyY, setPartyY] = useState(0);
 
   const detectType = (text: string): 'income' | 'expense' => {
     const lowerText = text.toLowerCase();
-    const incomeKeywords = ['credited', 'salary', 'refund', 'received', 'deposit', 'income', 'bonus', 'payment received'];
-    const expenseKeywords = ['debited', 'paid', 'spent', 'purchased', 'bought', 'withdrawn', 'payment to', 'sent to'];
+    const incomeKeywords = [
+      'credited',
+      'salary',
+      'refund',
+      'received',
+      'deposit',
+      'income',
+      'bonus',
+      'payment received',
+    ];
+    const expenseKeywords = [
+      'debited',
+      'paid',
+      'spent',
+      'purchased',
+      'bought',
+      'withdrawn',
+      'payment to',
+      'sent to',
+    ];
 
     for (const keyword of incomeKeywords) {
       if (lowerText.includes(keyword)) return 'income';
@@ -177,7 +194,19 @@ const [partyY, setPartyY] = useState(0);
   const detectCategoryBasic = (text: string): string | null => {
     const lowerText = text.toLowerCase();
     const categoryKeywords: { [key: string]: string[] } = {
-      food: ['food', 'restaurant', 'cafe', 'meal', 'pizza', 'burger', 'swiggy', 'zomato', 'lunch', 'dinner', 'breakfast'],
+      food: [
+        'food',
+        'restaurant',
+        'cafe',
+        'meal',
+        'pizza',
+        'burger',
+        'swiggy',
+        'zomato',
+        'lunch',
+        'dinner',
+        'breakfast',
+      ],
       entertainment: ['movie', 'cinema', 'netflix', 'spotify', 'game', 'concert', 'party'],
       education: ['course', 'college', 'school', 'udemy', 'book', 'tuition'],
       utilities: ['bill', 'electricity', 'water', 'gas', 'recharge', 'internet', 'phone'],
@@ -198,31 +227,30 @@ const [partyY, setPartyY] = useState(0);
 
   const fetchAIInsights = async (sms: string) => {
     try {
-      const response = await fetch(
-        'https://api.openai.com/v1/chat/completions',
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer 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',
-          },
-          body: JSON.stringify({
-            model: 'gpt-4o-mini',
-            messages: [
-              {
-                role: 'system',
-                content: 'Extract category (Food, Travel, Shopping, Utilities, Rent, Health, Education, Entertainment, Other) and counterparty from transaction. Respond only with JSON: {"category":"Food","counterparty":"Swiggy"}',
-              },
-              {
-                role: 'user',
-                content: sms,
-              },
-            ],
-            temperature: 0.3,
-            max_tokens: 100,
-          }),
-        }
-      );
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization:
+            'Bearer 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', // Replace with your API key
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [
+            {
+              role: 'system',
+              content:
+                'Extract category (Food, Travel, Shopping, Utilities, Rent, Health, Education, Entertainment, Other) and counterparty from transaction. Respond only with JSON: {"category":"Food","counterparty":"Swiggy"}',
+            },
+            {
+              role: 'user',
+              content: sms,
+            },
+          ],
+          temperature: 0.3,
+          max_tokens: 100,
+        }),
+      });
 
       if (!response.ok) {
         console.error('API Error:', response.status);
@@ -232,7 +260,6 @@ const [partyY, setPartyY] = useState(0);
       const data = await response.json();
       const aiText = data.choices?.[0]?.message?.content || '';
       const jsonMatch = aiText.match(/\{[\s\S]*\}/);
-
       if (jsonMatch) {
         const parsed = JSON.parse(jsonMatch[0]);
         return {
@@ -240,7 +267,6 @@ const [partyY, setPartyY] = useState(0);
           counterparty: parsed.counterparty || '',
         };
       }
-
       return { category: null, counterparty: '' };
     } catch (error) {
       console.error('AI Error:', error);
@@ -276,11 +302,11 @@ const [partyY, setPartyY] = useState(0);
 
       detectedCounterparty = aiResult.counterparty || '';
 
-      // Normalize category with user categories
       const matchedCategory = categories.find(
-        cat => cat.name.toLowerCase() === detectedCategory?.toLowerCase()
+        (cat) => cat.name.toLowerCase() === detectedCategory?.toLowerCase()
       );
-      const finalCategory = matchedCategory?.name || categories.find(cat => cat.name === 'Other')?.name || 'Other';
+      const finalCategory =
+        matchedCategory?.name || categories.find((cat) => cat.name === 'Other')?.name || 'Other';
 
       const user = auth.currentUser;
       if (!user) {
@@ -317,6 +343,8 @@ const [partyY, setPartyY] = useState(0);
     }
   };
 
+ 
+
   const submitTransaction = async () => {
     if (!amountRef.current || !selectedCategory) {
       Alert.alert('Error', 'Please fill amount and select category');
@@ -336,14 +364,14 @@ const [partyY, setPartyY] = useState(0);
       createdAt: serverTimestamp(),
     });
 
-    // Close modal directly without showing result screen
     closeModal();
   };
 
   const getCategoryColor = (categoryName: string): string => {
-    const cat = categories.find(c => c.name.toLowerCase() === categoryName.toLowerCase());
+    const cat = categories.find((c) => c.name.toLowerCase() === categoryName.toLowerCase());
     return cat?.color || '#78909C';
   };
+
 
   return (
     <Modal
@@ -370,7 +398,7 @@ const [partyY, setPartyY] = useState(0);
                 style={styles.choiceOption}
                 onPress={openForm}
                 activeOpacity={0.8}
-              >
+               >
                 <View style={styles.choiceIconContainer}>
                   <Text style={styles.choiceIcon}>📝</Text>
                 </View>
@@ -399,6 +427,23 @@ const [partyY, setPartyY] = useState(0);
                 </View>
                 <Text style={styles.choiceArrow}>→</Text>
               </TouchableOpacity>
+               <TouchableOpacity
+  style={styles.choiceOption}
+  onPress={() => setInputMode('file')}
+  activeOpacity={0.8}
+>
+  <View style={styles.choiceIconContainer}>
+    <Text style={styles.choiceIcon}>📄</Text>
+  </View>
+  <View style={styles.choiceTextContainer}>
+    <Text style={styles.choiceOptionTitle}>Import PDF / CSV</Text>
+    <Text style={styles.choiceOptionSubtitle}>
+      Import bank statement or transaction file
+    </Text>
+  </View>
+  <Text style={styles.choiceArrow}>→</Text>
+</TouchableOpacity>
+
             </View>
           )}
 
@@ -607,6 +652,7 @@ const [partyY, setPartyY] = useState(0);
             </ScrollView>
             
           )}
+      
 
           {/* Result Display */}
           {inputMode === 'result' && extractedData && (
@@ -706,6 +752,7 @@ const [partyY, setPartyY] = useState(0);
               <Text style={styles.closeButtonText}>Cancel</Text>
             </TouchableOpacity>
           )}
+
         </View>
       </View>
     </Modal>

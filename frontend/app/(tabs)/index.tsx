@@ -7,7 +7,8 @@ import {
   SafeAreaView,
   TouchableOpacity,
   Dimensions,
-  Animated
+  Animated,
+  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { PieChart } from "react-native-chart-kit";
@@ -62,6 +63,23 @@ export default function HomeScreen() {
   const [budget, setBudget] = useState(0);
   const [expenseData, setExpenseData] = useState<any[]>([]);
 
+  const budgetRef = useRef(0);
+  const lastDailyBudgetAlertRef = useRef<{ dateKey: string | null; exceeded: boolean }>({
+    dateKey: null,
+    exceeded: false,
+  });
+
+  const dateKeyLocal = (d: Date) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  };
+
+  const isSameLocalDay = (a: Date, b: Date) => {
+    return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+  };
+
   /* DERIVED VALUES */
   const income = baseIncome + incomeTxTotal;
   const balance = income - expenses;
@@ -79,7 +97,10 @@ export default function HomeScreen() {
         if (!snap.exists()) return;
         const data = snap.data();
         setBaseIncome(data.monthlyIncome || 0);
-        setBudget(data.monthlyBudget || 0);
+        const mb = Number(data.monthlyBudget || 0);
+        const resolvedBudget = Number.isFinite(mb) ? mb : 0;
+        setBudget(resolvedBudget);
+        budgetRef.current = resolvedBudget;
       }
     );
 
@@ -91,7 +112,9 @@ export default function HomeScreen() {
 
     const txUnsub = onSnapshot(txQuery, (snapshot) => {
       let total = 0;
+      let todayTotal = 0;
       const categoryTotals: Record<string, number> = {};
+      const today = new Date();
 
       snapshot.forEach((doc) => {
         const data = doc.data();
@@ -99,12 +122,43 @@ export default function HomeScreen() {
         const rawCategory = String(data.category || "Other").toLowerCase();
         const category = rawCategory === 'transport' ? 'travel' : rawCategory === 'bills' ? 'utilities' : rawCategory;
 
+        const createdAt = data.createdAt?.toDate
+          ? data.createdAt.toDate()
+          : data.createdAt instanceof Date
+            ? data.createdAt
+            : null;
+        if (createdAt && isSameLocalDay(createdAt, today)) {
+          todayTotal += amount;
+        }
+
         total += amount;
         categoryTotals[category] =
           (categoryTotals[category] || 0) + amount;
       });
 
       setExpenses(total);
+
+      const currentBudget = budgetRef.current;
+      if (currentBudget > 0) {
+        const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+        const dailyBudget = currentBudget / Math.max(1, daysInMonth);
+        const key = dateKeyLocal(today);
+        const alertState = lastDailyBudgetAlertRef.current;
+
+        if (alertState.dateKey !== key) {
+          alertState.dateKey = key;
+          alertState.exceeded = false;
+        }
+
+        if (!alertState.exceeded && todayTotal > dailyBudget) {
+          alertState.exceeded = true;
+          Alert.alert(
+            "Daily budget exceeded",
+            `Today's spending: ₹${Math.round(todayTotal).toLocaleString('en-IN')}
+Daily limit: ₹${Math.round(dailyBudget).toLocaleString('en-IN')}`
+          );
+        }
+      }
 
       const pieData = Object.entries(categoryTotals).map(
         ([category, amount]) => ({
@@ -274,6 +328,14 @@ export default function HomeScreen() {
     }}
   />
   <MenuItem
+    icon="analytics-outline"
+    label="Prediction"
+    onPress={() => {
+      closeMenu();
+      router.push('/(tabs)/Prediction');
+    }}
+  />
+  <MenuItem
     icon="wallet-outline"
     label="Savings Goal"
     onPress={() => {
@@ -281,14 +343,7 @@ export default function HomeScreen() {
       router.push('/savingGoals');
     }}
   />
-  <MenuItem
-    icon="stats-chart-outline"
-    label="Monthly Reports"
-    onPress={() => {
-      closeMenu();
-      router.push('/(tabs)/MonthlyReport' as any);
-    }}
-  />
+  <MenuItem icon="stats-chart-outline" label="Monthly Reports" />
   <MenuItem icon="trending-up-outline" label="Spending Insights"
   onPress={() => {closeMenu(); router.push('../(auth)/SpendingInsights')} } /> 
   <MenuItem
@@ -296,7 +351,7 @@ export default function HomeScreen() {
     label="Alerts"
     onPress={() => {
       closeMenu();
-      router.push('/(tabs)/Alerts');
+      router.push("/(tabs)/Alerts");
     }}
   />
 

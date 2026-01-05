@@ -75,6 +75,10 @@ export default function TabsLayout() {
         options={{ href: null }}
       />
       <Tabs.Screen
+        name="Prediction"
+        options={{ href: null }}
+      />
+      <Tabs.Screen
         name="savingGoals"
         options={{ href: null }}
       />

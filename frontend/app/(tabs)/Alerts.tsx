@@ -11,6 +11,7 @@ import {
   View,
   Platform,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import * as Notifications from "expo-notifications";
@@ -29,7 +30,7 @@ import {
 } from "firebase/firestore";
 import { format, isValid, parse } from "date-fns";
 
-type ReminderKind = "bill" | "loan" | "emi";
+type ReminderKind = "bill" | "loan" | "emi" | "other";
 
 type Reminder = {
   id: string;
@@ -55,7 +56,8 @@ const toDateSafe = (v: any) => {
 const kindLabel = (k: ReminderKind) => {
   if (k === "bill") return "Bill";
   if (k === "loan") return "Loan";
-  return "EMI";
+  if (k === "emi") return "EMI";
+  return "Other";
 };
 
 async function scheduleLocalNotificationIfAvailable(params: {
@@ -231,15 +233,18 @@ export default function Alerts() {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor={BG} />
 
       <View style={styles.header}>
-        <TouchableOpacity style={styles.iconButton} onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color={PRIMARY} />
-        </TouchableOpacity>
+        <View style={styles.headerTopRow}>
+          <TouchableOpacity style={styles.iconButton} onPress={() => router.back()}>
+            <Ionicons name="arrow-back" size={24} color={PRIMARY} />
+          </TouchableOpacity>
+          <View style={{ width: 48 }} />
+        </View>
+
         <Text style={styles.headerTitle}>Alerts</Text>
-        <View style={{ width: 48 }} />
       </View>
 
       {loading ? (
@@ -265,7 +270,7 @@ export default function Alerts() {
             {composerOpen ? (
               <View style={styles.composerBody}>
                 <View style={styles.kindRow}>
-                  {(["bill", "loan", "emi"] as ReminderKind[]).map((k) => {
+                  {(["bill", "loan", "emi", "other"] as ReminderKind[]).map((k) => {
                     const active = k === kind;
                     return (
                       <TouchableOpacity
@@ -354,7 +359,13 @@ export default function Alerts() {
               const overdue = due ? due.getTime() < Date.now() : false;
 
               const iconName =
-                r.kind === "bill" ? "flash-outline" : r.kind === "loan" ? "cash-outline" : "card-outline";
+                r.kind === "bill"
+                  ? "flash-outline"
+                  : r.kind === "loan"
+                    ? "cash-outline"
+                    : r.kind === "emi"
+                      ? "card-outline"
+                      : "options-outline";
               const iconBg = overdue ? "#FFF1F2" : "#E8EFFF";
               const iconColor = overdue ? "#C62828" : PRIMARY;
 
@@ -391,7 +402,7 @@ export default function Alerts() {
           )}
         </ScrollView>
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -402,11 +413,14 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 20,
-    paddingTop: 40,
+    paddingTop: 10,
     paddingBottom: 16,
+  },
+  headerTopRow: {
     flexDirection: "row",
-    alignItems: "center",
     justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 10,
   },
   headerTitle: {
     fontSize: 28,
@@ -507,6 +521,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   sectionHeader: {
+    marginTop: 14,
     marginBottom: 6,
   },
   sectionTitle: {

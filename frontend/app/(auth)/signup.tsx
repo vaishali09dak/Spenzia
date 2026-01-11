@@ -26,9 +26,9 @@ export default function SignUpScreen() {
   const [verificationSent, setVerificationSent] = useState(false);
 
   const [request, response, promptAsync] = Google.useAuthRequest({
-  clientId: '512927432128-daf8mgq87mr69sr6c9rj7hl0bvlmmbj2.apps.googleusercontent.com',
+  androidClientId: '512927432128-q53gjdh5fqvh063tngk6u1iav14020ba.apps.googleusercontent.com',
+  webClientId: '512927432128-daf8mgq87mr69sr6c9rj7hl0bvlmmbj2.apps.googleusercontent.com',
 });
-
 
   useEffect(() => {
     // Google sign-in

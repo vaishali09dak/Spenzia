@@ -56,7 +56,6 @@ export default function HomeScreen() {
     }).start(() => setMenuOpen(false));
   };
 
-  /* STATE (Backend-ready) */
   const [baseIncome, setBaseIncome] = useState(0);
   const [incomeTxTotal, setIncomeTxTotal] = useState(0);
   const [expenses, setExpenses] = useState(0);
@@ -104,7 +103,6 @@ export default function HomeScreen() {
       }
     );
 
-    // 🔴 Listen to transactions in real-time
     const txQuery = query(
       collection(db1, "users", user.uid, "transactions"),
       where("type", "==", "expense")
@@ -343,7 +341,10 @@ Daily limit: ₹${Math.round(dailyBudget).toLocaleString('en-IN')}`
       router.push('/savingGoals');
     }}
   />
-  <MenuItem icon="stats-chart-outline" label="Monthly Reports" />
+  <MenuItem icon="stats-chart-outline" label="Monthly Reports" onPress={() => {
+      closeMenu();
+      router.push('/MonthlyReport');
+    }} />
   <MenuItem icon="trending-up-outline" label="Spending Insights"
   onPress={() => {closeMenu(); router.push('../(auth)/SpendingInsights')} } /> 
   <MenuItem

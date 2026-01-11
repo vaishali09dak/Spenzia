@@ -362,7 +362,7 @@ export default function MonthlyReport() {
         </View>
 
         <Text style={styles.headerTitle}>Monthly Report</Text>
-        <Text style={styles.headerSubtitle}>{monthLabel}</Text>
+        {/* <Text style={styles.headerSubtitle}>{monthLabel}</Text> */}
       </View>
 
       <ScrollView
@@ -497,6 +497,22 @@ export default function MonthlyReport() {
             )}
           </View>
         </View>
+        <TouchableOpacity
+  style={styles.exportFab}
+  onPress={exportPdf}
+  disabled={exporting}
+  activeOpacity={0.9}
+>
+  {exporting ? (
+    <ActivityIndicator color="#fff" />
+  ) : (
+    <>
+      <Ionicons name="download-outline" size={22} color="#fff" />
+      <Text style={styles.exportFabText}>Export PDF</Text>
+    </>
+  )}
+</TouchableOpacity>
+
       </ScrollView>
     </SafeAreaView>
   );
@@ -714,4 +730,29 @@ const styles = StyleSheet.create({
   chartScrollContent: {
     paddingRight: 4,
   },
+  exportFab: {
+  position: "absolute",
+  right: 120,
+  bottom: 30,
+  flexDirection: "row",
+  alignItems: "center",
+  gap: 10,
+  backgroundColor: PRIMARY,
+  paddingHorizontal: 18,
+  paddingVertical: 14,
+  borderRadius: 30,
+  elevation: 6,
+  shadowColor: "#000",
+  shadowOffset: { width: 0, height: 4 },
+  shadowOpacity: 0.25,
+  shadowRadius: 6,
+},
+
+exportFabText: {
+  color: "#fff",
+  fontWeight: "800",
+  fontSize: 14,
+  letterSpacing: 0.3,
+},
+
 });

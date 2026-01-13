@@ -453,6 +453,7 @@ const FinancialHeatMapScreen = () => {
   const handleCellPress = useCallback(
     (date: Date | null, amount: number | null) => {
       if (!date) return;
+
       const resolved = resolveCategoryForAmount(amount, categories);
       const categoryLabel = resolved?.label ?? 'Uncategorized';
       const categoryColor =

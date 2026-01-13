@@ -11,6 +11,7 @@ import {
   Modal,
   TextInput,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
 import { useNavigation } from '@react-navigation/native';
@@ -124,7 +125,7 @@ const [detailVisible, setDetailVisible] = useState(false);
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#F5F1E8" />
 
       {/* HEADER */}
@@ -364,7 +365,7 @@ const [detailVisible, setDetailVisible] = useState(false);
 )}
 </Modal>
 
-    </View>
+    </SafeAreaView>
   );
 };
 
@@ -394,7 +395,7 @@ const styles = StyleSheet.create({
 
   header: {
     paddingHorizontal: 20,
-    paddingTop: 40,
+    paddingTop: 10,
     paddingBottom: 30,
   },
 

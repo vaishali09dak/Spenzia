@@ -12,7 +12,11 @@
       "supportsTablet": true
     },
     "extra": {
-      "openaiApiKey": "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"
+      "openaiApiKey": "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",
+      "router": {},
+      "eas": {
+        "projectId": "f3d589ec-7de7-4492-b9f1-c327a08a87ac"
+      }
     },
     "android": {
       "adaptiveIcon": {

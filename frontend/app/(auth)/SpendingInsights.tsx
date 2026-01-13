@@ -13,16 +13,17 @@ import {
   Alert,
   TextInput,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { collection, query, orderBy, getDocs, where } from 'firebase/firestore';
 import { useNavigation } from '@react-navigation/native';
 import { auth, db1 } from '../../firebase';
+
 import {
   doc,
   setDoc,
   deleteDoc,
 } from 'firebase/firestore';
-
 
 const { width } = Dimensions.get('window');
 type FeatherIconName = React.ComponentProps<typeof Feather>['name'];
@@ -214,13 +215,13 @@ const saveBudget = async (spentAmount: number) => {
     const user = auth.currentUser;
     if (!user || !selectedCategory) return;
 
-    // 🔥 Save to Firestore
+    // Save to Firestore
     await setDoc(
       doc(db1, 'users', user.uid, 'budgets', selectedCategory),
       { amount: value }
     );
 
-    // ✅ Update local state
+    // Update local state
     setBudgets(prev => ({
       ...prev,
       [selectedCategory]: value,
@@ -308,7 +309,7 @@ const removeBudget = (category: string) => {
   const avgSpending = getAverageSpending();
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#F5F1E8" />
 
       {/* HEADER */}
@@ -572,7 +573,7 @@ const removeBudget = (category: string) => {
 </Modal>
 
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 };
 
@@ -602,10 +603,9 @@ const styles = StyleSheet.create({
 
   header: {
   paddingHorizontal: 20,
-  paddingTop: 40,   // ⬆️ arrow goes higher
+  paddingTop: 10,   // ⬆️ arrow goes higher
   paddingBottom: 20,
 },
-
 
   backButton: {
   width: 48,

@@ -12,6 +12,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { auth, db1 } from "../../firebase";
 import { collection, doc, getDoc, getDocs, orderBy, query } from "firebase/firestore";
@@ -338,7 +339,7 @@ export default function MonthlyReport() {
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor={BG} />
 
       <View style={styles.header}>
@@ -497,7 +498,7 @@ export default function MonthlyReport() {
           </View>
         </View>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -518,7 +519,7 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 20,
-    paddingTop: 40,
+    paddingTop: 10,
     paddingBottom: 16,
   },
   headerTopRow: {

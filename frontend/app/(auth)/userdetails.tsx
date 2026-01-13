@@ -57,7 +57,7 @@ export default function UserDetailsScreen() {
       });
 
       // 🚀 Go to home
-      router.replace("/(tabs)");
+      router.replace("/quiz");
     } catch (error: any) {
       Alert.alert("Error", error.message);
     } finally {

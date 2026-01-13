@@ -15,7 +15,7 @@ import { addDoc, collection, getDocs, serverTimestamp } from 'firebase/firestore
 import { auth, db1 } from '../../firebase';
 
 type ModalType = 'income' | 'expense' | null;
-type InputMode = 'choice' | 'form' | 'sms' | 'result' | 'file' | null;
+type InputMode = 'choice' | 'form' | 'sms' | 'result' | 'file' | 'review' |null;
 
 interface Props {
   visible: boolean;
@@ -48,6 +48,15 @@ const DEFAULT_CATEGORIES: Category[] = [
   { name: 'Entertainment', color: '#64B5F6' },
   { name: 'Other', color: '#78909C' },
 ];
+interface ImportedTransaction {
+  amount: number;
+  type: 'income' | 'expense';
+  category: string;
+  note: string;
+  counterparty?: string;
+  date: Date;
+  confidence?: 'high' | 'medium' | 'low';
+}
 
 const ExpenseFabModal: React.FC<Props> = ({ visible, onClose }) => {
   const [inputMode, setInputMode] = useState<InputMode>(null);
@@ -60,6 +69,9 @@ const ExpenseFabModal: React.FC<Props> = ({ visible, onClose }) => {
   const [transactionType, setTransactionType] = useState<'income' | 'expense'>('expense');
   const [transactionDate, setTransactionDate] = useState(new Date());
   const [counterparty, setCounterparty] = useState('');
+const [rawCSV, setRawCSV] = useState('');
+const [parsedTransactions, setParsedTransactions] = useState<ImportedTransaction[]>([]);
+const [importLoading, setImportLoading] = useState(false);
 
   const amountRef = useRef('');
   const scrollRef = useRef<ScrollView>(null);
@@ -82,6 +94,8 @@ const ExpenseFabModal: React.FC<Props> = ({ visible, onClose }) => {
     setTransactionDate(new Date());
     setCounterparty('');
     amountRef.current = '';
+    setRawCSV('');
+  setParsedTransactions([]);
   };
 
   const closeModal = () => {
@@ -343,6 +357,74 @@ const ExpenseFabModal: React.FC<Props> = ({ visible, onClose }) => {
     }
   };
 
+  const handleCSVParse = async () => {
+  if (!rawCSV.trim()) {
+    Alert.alert('Error', 'Paste CSV data first');
+    return;
+  }
+
+  setImportLoading(true);
+
+  try {
+    const rows = rawCSV.split('\n').slice(1); // skip header
+    const transactions: ImportedTransaction[] = [];
+
+    for (const row of rows) {
+      const [date, description, amountStr] = row.split(',');
+
+      const amount = Math.abs(Number(amountStr));
+      const type = Number(amountStr) < 0 ? 'expense' : 'income';
+
+      let category = detectCategoryBasic(description) || '';
+      let counterparty = description;
+
+      // 🔴 If category missing → use AI
+      if (!category) {
+        const ai = await fetchAIInsights(description);
+        category = ai.category || 'Other';
+        counterparty = ai.counterparty || description;
+      }
+
+      transactions.push({
+        amount,
+        type,
+        category,
+        note: description,
+        counterparty,
+        date: new Date(date),
+        confidence: category ? 'high' : 'low',
+      });
+    }
+
+    setParsedTransactions(transactions);
+    setInputMode('review');
+  } catch (err) {
+    Alert.alert('Error', 'Invalid CSV format');
+  } finally {
+    setImportLoading(false);
+  }
+};
+
+const saveAllTransactions = async () => {
+  const user = auth.currentUser;
+  if (!user) return;
+
+  try {
+    const batch = parsedTransactions.map(tx =>
+      addDoc(collection(db1, 'users', user.uid, 'transactions'), {
+        ...tx,
+        createdAt: serverTimestamp(),
+      })
+    );
+
+    await Promise.all(batch);
+    Alert.alert('Success', 'All transactions saved');
+    closeModal();
+  } catch (err) {
+    Alert.alert('Error', 'Failed to save transactions');
+  }
+};
+
  
 
   const submitTransaction = async () => {
@@ -436,9 +518,9 @@ const ExpenseFabModal: React.FC<Props> = ({ visible, onClose }) => {
     <Text style={styles.choiceIcon}>📄</Text>
   </View>
   <View style={styles.choiceTextContainer}>
-    <Text style={styles.choiceOptionTitle}>Import PDF / CSV</Text>
+    <Text style={styles.choiceOptionTitle}>Import CSV Data</Text>
     <Text style={styles.choiceOptionSubtitle}>
-      Import bank statement or transaction file
+      Import transaction in csv format
     </Text>
   </View>
   <Text style={styles.choiceArrow}>→</Text>
@@ -652,7 +734,87 @@ const ExpenseFabModal: React.FC<Props> = ({ visible, onClose }) => {
             </ScrollView>
             
           )}
-      
+      {inputMode === 'file' && (
+  <ScrollView contentContainerStyle={styles.scrollContent}>
+    <Text style={styles.label}>Paste CSV Data</Text>
+
+    <TextInput
+      placeholder={`date,description,amount\n2024-01-05,Swiggy Order,-450\n2024-01-06,Salary,50000`}
+      multiline
+      numberOfLines={10}
+      style={[styles.input, { height: 180 }]}
+      value={rawCSV}
+      onChangeText={setRawCSV}
+    />
+
+    <TouchableOpacity
+      style={styles.submitBtn}
+      onPress={handleCSVParse}
+    >
+      <Text style={styles.submitText}>🔍 Parse Transactions</Text>
+    </TouchableOpacity>
+
+    <TouchableOpacity style={styles.backButton} onPress={goBack}>
+      <Text style={styles.backButtonText}>← Back</Text>
+    </TouchableOpacity>
+  </ScrollView>
+)}
+ {inputMode === 'review' && parsedTransactions.length > 0 && (
+  <ScrollView showsVerticalScrollIndicator={false}>
+    <Text style={styles.choiceTitle}>Review Imported Transactions</Text>
+
+    {parsedTransactions.map((tx, index) => (
+      <View key={index} style={styles.resultCard}>
+        <View style={styles.resultRow}>
+          <Text style={styles.resultLabel}>Amount</Text>
+          <Text
+            style={[
+              styles.resultValue,
+              { color: tx.type === 'income' ? '#10B981' : '#EF4444' },
+            ]}
+          >
+            ₹{tx.amount.toLocaleString()}
+          </Text>
+        </View>
+
+        <View style={styles.resultRow}>
+          <Text style={styles.resultLabel}>Type</Text>
+          <Text style={styles.resultInfo}>{tx.type.toUpperCase()}</Text>
+        </View>
+
+        <View style={styles.resultRow}>
+          <Text style={styles.resultLabel}>Category</Text>
+          <View
+            style={[
+              styles.resultBadge,
+              { backgroundColor: getCategoryColor(tx.category) },
+            ]}
+          >
+            <Text style={styles.resultBadgeText}>{tx.category}</Text>
+          </View>
+        </View>
+
+        <View style={styles.resultRow}>
+          <Text style={styles.resultLabel}>Description</Text>
+          <Text style={styles.resultInfo}>{tx.note}</Text>
+        </View>
+
+      </View>
+    ))}
+
+    <TouchableOpacity
+      style={[styles.submitBtn, { backgroundColor: '#10B981' }]}
+      onPress={saveAllTransactions}
+    >
+      <Text style={styles.submitText}>✅ Save All Transactions</Text>
+    </TouchableOpacity>
+
+    <TouchableOpacity style={styles.backButton} onPress={goBack}>
+      <Text style={styles.backButtonText}>← Back</Text>
+    </TouchableOpacity>
+  </ScrollView>
+)}
+
 
           {/* Result Display */}
           {inputMode === 'result' && extractedData && (
@@ -1196,7 +1358,7 @@ fontWeight: '700',
 color: '#6366F1',
 },
 submitBtn: {
-backgroundColor: '#64B5F6',
+backgroundColor: '#5B8DEF',
 padding: 18,
 borderRadius: 16,
 alignItems: 'center',

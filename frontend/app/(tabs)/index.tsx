@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
-import { auth, db1 } from "../../firebase";
+import { auth, db1, } from "../../firebase";
+import { updateDoc } from "firebase/firestore";
 import {
   View,
   Text,
@@ -9,6 +10,8 @@ import {
   Dimensions,
   Animated,
   Alert,
+  TextInput,
+  Modal,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { PieChart } from "react-native-chart-kit";
@@ -19,6 +22,7 @@ import ExpenseFabModal from '../(auth)/ExpenseFabModal';
 
 const { height, width } = Dimensions.get("window");
 const MENU_WIDTH = width * 0.70;
+
 
 const CATEGORY_COLORS: Record<string, string> = {
   education: "#F7B6C8",
@@ -62,6 +66,8 @@ export default function HomeScreen() {
   const [expenses, setExpenses] = useState(0);
   const [budget, setBudget] = useState(0);
   const [expenseData, setExpenseData] = useState<any[]>([]);
+const [budgetModalVisible, setBudgetModalVisible] = useState(false);
+const [budgetInput, setBudgetInput] = useState("");
 
   const budgetRef = useRef(0);
   const lastDailyBudgetAlertRef = useRef<{ dateKey: string | null; exceeded: boolean }>({
@@ -85,6 +91,14 @@ export default function HomeScreen() {
   const balance = income - expenses;
   const remaining = budget - expenses;
   const progress = budget > 0 ? expenses / budget : 0;
+useEffect(() => {
+  if (balance < 0) {
+    Alert.alert(
+      "Balance Error",
+      "Your total balance cannot be negative. Please add income through editing profile."
+    );
+  }
+}, [balance]);
 
   useEffect(() => {
     const user = auth.currentUser;
@@ -109,6 +123,8 @@ export default function HomeScreen() {
       collection(db1, "users", user.uid, "transactions"),
       where("type", "==", "expense")
     );
+
+  
 
     const txUnsub = onSnapshot(txQuery, (snapshot) => {
       let total = 0;
@@ -196,6 +212,33 @@ Daily limit: ₹${Math.round(dailyBudget).toLocaleString('en-IN')}`
   }, []);
 
   const [fabModalVisible, setFabModalVisible] = useState(false);
+  const addBudget = async () => {
+  const value = Number(budgetInput);
+
+  if (!value || value <= 0) {
+    Alert.alert("Invalid amount");
+    return;
+  }
+
+  if (budget + value > balance) {
+    Alert.alert(
+      "Insufficient Balance",
+      "Budget cannot exceed total balance. Add income first."
+    );
+    return;
+  }
+
+  const user = auth.currentUser;
+  if (!user) return;
+
+  await updateDoc(doc(db1, "users", user.uid), {
+    monthlyBudget: budget + value,
+  });
+
+  setBudgetModalVisible(false);
+  setBudgetInput("");
+};
+
   return (
     <SafeAreaView style={styles.container}>
        {/* <BackgroundDecor /> */}
@@ -265,17 +308,41 @@ Daily limit: ₹${Math.round(dailyBudget).toLocaleString('en-IN')}`
             />
           </View>
 
-          <View style={styles.budgetFooter}>
-            <Text>Budget ₹{budget}</Text>
-            <Text style={styles.remaining}>
-              Remaining ₹{remaining}
-            </Text>
-          </View>
+         <View style={styles.budgetFooter}>
+  <Text>Budget ₹{budget}</Text>
+  <Text style={styles.remaining}>Remaining ₹{remaining}</Text>
+</View>
+
+{remaining === budget && (
+  <TouchableOpacity
+    style={styles.addBudgetBtn}
+    onPress={() => setBudgetModalVisible(true)}
+  >
+    <Text style={styles.addBudgetText}>+ Add Budget</Text>
+  </TouchableOpacity>
+)}
+
         </View>
       </View>
 
       {/* ADD EXPENSE */}
-      <TouchableOpacity style={styles.fab} onPress={() => setFabModalVisible(true)} >
+      <TouchableOpacity
+  style={[
+    styles.fab,
+    balance <= 0 && { backgroundColor: '#9CA3AF' }
+  ]}
+  onPress={() => {
+    if (balance <= 0) {
+      Alert.alert(
+        "No Balance",
+        "You have no balance left. Add income first through editing your profile."
+      );
+      return;
+    }
+    setFabModalVisible(true);
+  }}
+>
+
         <Ionicons name="add" size={28} color="#fff" />
       </TouchableOpacity>
       <ExpenseFabModal visible={fabModalVisible} onClose={() => setFabModalVisible(false)} />
@@ -360,6 +427,25 @@ Daily limit: ₹${Math.round(dailyBudget).toLocaleString('en-IN')}`
   />
 
 </Animated.View>
+<Modal transparent visible={budgetModalVisible} animationType="slide">
+  <View style={styles.modalOverlay}>
+    <View style={styles.modalCard}>
+      <Text style={styles.modalTitle}>Add Monthly Budget</Text>
+
+      <TextInput
+        placeholder="Enter amount"
+        keyboardType="numeric"
+        value={budgetInput}
+        onChangeText={setBudgetInput}
+        style={styles.input}
+      />
+
+      <TouchableOpacity style={styles.confirmBtn} onPress={addBudget}>
+        <Text style={{ color: "#fff", fontWeight: "600" }}>Confirm</Text>
+      </TouchableOpacity>
+    </View>
+  </View>
+</Modal>
 
   </SafeAreaView>
 );
@@ -545,6 +631,53 @@ menuText: {
   marginLeft: 16,
   fontSize: 16,
   color: "#333",
+},
+addBudgetBtn: {
+  marginTop: 12,
+  backgroundColor: "#213c74ff",
+  paddingVertical: 10,
+  borderRadius: 10,
+  alignItems: "center",
+},
+
+addBudgetText: {
+  color: "#fff",
+  fontWeight: "600",
+},
+
+modalOverlay: {
+  flex: 1,
+  backgroundColor: "rgba(0,0,0,0.4)",
+  justifyContent: "center",
+  alignItems: "center",
+},
+
+modalCard: {
+  width: "85%",
+  backgroundColor: "#fff",
+  borderRadius: 16,
+  padding: 20,
+},
+
+modalTitle: {
+  fontSize: 18,
+  fontWeight: "700",
+  marginBottom: 12,
+},
+
+input: {
+  borderWidth: 1,
+  borderColor: "#ddd",
+  borderRadius: 10,
+  padding: 12,
+  marginBottom: 16,
+},
+
+confirmBtn: {
+  backgroundColor: "#213c74ff",
+  paddingVertical: 12,
+  borderRadius: 12,
+  alignItems: "center",
 },
 
 });

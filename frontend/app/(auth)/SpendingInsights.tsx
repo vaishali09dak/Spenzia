@@ -296,7 +296,7 @@ const removeBudget = (category: string) => {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <StatusBar barStyle="dark-content" backgroundColor="#F5F1E8" />
+        <StatusBar barStyle="dark-content" backgroundColor="#FFF9F2" />
         <ActivityIndicator size="large" color="#2C3E7C" />
         <Text style={styles.loadingText}>Analyzing spending...</Text>
       </View>
@@ -310,7 +310,7 @@ const removeBudget = (category: string) => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F5F1E8" />
+      <StatusBar barStyle="dark-content" backgroundColor="#FFF9F2" />
 
       {/* HEADER */}
       <View style={styles.header}>
@@ -326,7 +326,8 @@ const removeBudget = (category: string) => {
 
       {/* CONTENT */}
       <ScrollView
-        style={styles.content}
+  style={{ backgroundColor: '#FFF9F2' }}
+
         contentContainerStyle={styles.contentContainer}
         refreshControl={
           <RefreshControl
@@ -591,7 +592,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F5F1E8',
+    backgroundColor: '#FFF9F2',
   },
 
   loadingText: {
@@ -633,7 +634,7 @@ const styles = StyleSheet.create({
 
   content: {
     flex: 1,
-    backgroundColor: '#F5F1E8',
+    backgroundColor: '#FFF9F2',
   },
 
   contentContainer: {
@@ -878,7 +879,7 @@ const styles = StyleSheet.create({
   marginTop: 10,
   paddingVertical: 10,
   borderRadius: 10,
-  backgroundColor: '#E8EFFF',
+  backgroundColor: '#FFF9F2',
   alignItems: 'center',
 },
 
@@ -897,7 +898,7 @@ modalOverlay: {
   flex: 1,
   justifyContent: 'center',
   alignItems: 'center',
-  backgroundColor: 'rgba(0,0,0,0.15)', // 👈 VERY LIGHT
+  backgroundColor: 'rgba(255,249,242,0.95)', // 👈 VERY LIGHT
 },
 
 
@@ -917,7 +918,7 @@ modalTitle: {
 
 modalInput: {
   borderWidth: 1,
-  borderColor: '#E0E0E0',
+  borderColor: '#FFF9F2',
   borderRadius: 12,
   padding: 12,
   fontSize: 16,
@@ -936,7 +937,7 @@ modalCancel: {
 },
 
 modalCancelText: {
-  color: '#8E8E93',
+  color: '#FFF9F2',
   fontWeight: '600',
 },
 

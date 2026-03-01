@@ -2,6 +2,7 @@
 import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
 import { GoogleAuthProvider, signInWithCredential, sendEmailVerification } from 'firebase/auth';
+import { KeyboardAvoidingView, Platform } from 'react-native';
 
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, StyleSheet, Alert, TouchableOpacity, Dimensions, ScrollView } from 'react-native';
@@ -130,6 +131,11 @@ export default function SignUpScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <KeyboardAvoidingView
+    style={{ flex: 1 }}
+    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    keyboardVerticalOffset={Platform.OS === 'ios' ? 20 : 0}
+  >
       <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.scrollContent}>
         <StatusBar style="dark" />
 
@@ -207,16 +213,7 @@ export default function SignUpScreen() {
                 <Text style={styles.buttonText}>{loading ? "Loading..." : "Sign Up"}</Text>
               </TouchableOpacity>
                
-               {/* Google Sign-In */}
-              <TouchableOpacity
-                style={[styles.button, { backgroundColor: '#1E3A5F', borderWidth: 1, borderColor: '#DDD', marginBottom: 20 }]}
-                onPress={() => promptAsync()}
-              >
-                <Text style={{ color: 'white', fontSize: 16, fontWeight: '600' }}>
-                  Continue with Google
-                </Text>
-              </TouchableOpacity>
-
+              
               {/* Sign In Link */}
               <View style={styles.signInContainer}>
                 <Text style={styles.signInText}>Already have an account? </Text>
@@ -225,21 +222,12 @@ export default function SignUpScreen() {
                 </TouchableOpacity>
               </View>
 
-              {/* Google Sign-In */}
-              {/* <TouchableOpacity
-                style={[styles.button, { backgroundColor: '#1E3A5F', borderWidth: 1, borderColor: '#DDD', marginBottom: 20 }]}
-                onPress={() => promptAsync()}
-              >
-                <Text style={{ color: 'white', fontSize: 16, fontWeight: '600' }}>
-                  Continue with Google
-                </Text>
-              </TouchableOpacity> */}
             </>
           ) : (
             <View style={{ alignItems: 'center', paddingVertical: 40 }}>
               <Text style={[styles.title, { fontSize: 22 }]}>Check Your Email</Text>
               <Text style={{ textAlign: 'center', marginVertical: 16 }}>
-                A verification link has been sent to your email. Please verify your email to continue.
+                A verification link has been sent to your email. Please verify your email to continue. Check your spam.
               </Text>
               <Text style={{ color: '#888', marginBottom: 20 }}>Waiting for verification...</Text>
 
@@ -252,6 +240,7 @@ export default function SignUpScreen() {
           )}
         </View>
       </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

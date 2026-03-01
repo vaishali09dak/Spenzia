@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, StyleSheet, Alert, TouchableOpacity, Dimensions, ScrollView } from 'react-native';
 import { Image } from 'expo-image';
-
+import { KeyboardAvoidingView, Platform } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
@@ -43,6 +43,11 @@ export default function LoginScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 20 : 0}
+        >
       <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.scrollContent}>
         <StatusBar style="dark" />
         
@@ -107,14 +112,7 @@ export default function LoginScreen() {
           <Text style={styles.buttonText}>{loading ? "Loading..." : "Log In"}</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-                        style={[styles.button, { backgroundColor: '#1E3A5F', borderWidth: 1, borderColor: '#DDD', marginBottom: 20 }]}
-                        onPress={() => promptAsync()}
-                      >
-                        <Text style={{ color: 'white', fontSize: 16, fontWeight: '600' }}>
-                          Continue with Google
-                        </Text>
-                      </TouchableOpacity>
+      
         {/* Sign Up Link */}
         <View style={styles.signUpContainer}>
           <Text style={styles.signUpText}>Don&apos;t have an account? </Text>
@@ -122,16 +120,10 @@ export default function LoginScreen() {
             <Text style={styles.signUpLink}>Sign Up</Text>
           </TouchableOpacity>
         </View>
-        {/* <TouchableOpacity
-                        style={[styles.button, { backgroundColor: '#1E3A5F', borderWidth: 1, borderColor: '#DDD', marginBottom: 20 }]}
-                        onPress={() => promptAsync()}
-                      >
-                        <Text style={{ color: 'white', fontSize: 16, fontWeight: '600' }}>
-                          Continue with Google
-                        </Text>
-                      </TouchableOpacity> */}
+       
       </View>
       </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

@@ -318,6 +318,26 @@ export default function Prediction() {
                 />
               </View>
 
+<View style={styles.sectionHeader}>
+                <Text style={styles.sectionHeaderTitle}>Recent Months</Text>
+                <Text style={styles.sectionHeaderSub}>Based on your recorded expenses</Text>
+              </View>
+
+              {points
+                .slice()
+                .reverse()
+                .map((p) => (
+                  <TouchableOpacity
+                    key={p.key}
+                    style={[styles.listRow, selectedKey === p.key && styles.listRowActive]}
+                    onPress={() => setSelectedKey(p.key)}
+                    activeOpacity={0.85}
+                  >
+                    <Text style={styles.listLabel}>{p.labelFull}</Text>
+                    <Text style={styles.listValue}>₹{p.total.toLocaleString("en-IN")}</Text>
+                  </TouchableOpacity>
+                ))}
+                
               <View style={styles.sectionCard}>
                 <Text style={styles.sectionTitle}>Selected Month</Text>
                 <View style={styles.selectedRow}>
@@ -356,25 +376,7 @@ export default function Prediction() {
                 )}
               </View>
 
-              <View style={styles.sectionHeader}>
-                <Text style={styles.sectionHeaderTitle}>Recent Months</Text>
-                <Text style={styles.sectionHeaderSub}>Based on your recorded expenses</Text>
-              </View>
-
-              {points
-                .slice()
-                .reverse()
-                .map((p) => (
-                  <TouchableOpacity
-                    key={p.key}
-                    style={[styles.listRow, selectedKey === p.key && styles.listRowActive]}
-                    onPress={() => setSelectedKey(p.key)}
-                    activeOpacity={0.85}
-                  >
-                    <Text style={styles.listLabel}>{p.labelFull}</Text>
-                    <Text style={styles.listValue}>₹{p.total.toLocaleString("en-IN")}</Text>
-                  </TouchableOpacity>
-                ))}
+              
             </>
           )}
         </ScrollView>

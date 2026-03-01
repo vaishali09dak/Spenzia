@@ -74,7 +74,8 @@ export default function SettingsScreen() {
         <View style={styles.divider} />
 
         {/* Help */}
-        <TouchableOpacity style={styles.item}>
+        <TouchableOpacity style={styles.item}
+        onPress={() => router.push("/(auth)/HelpSupport")}>
           <Ionicons name="help-circle-outline" size={22} color="#1F305E" />
           <Text style={styles.itemText}>Help & Support</Text>
         </TouchableOpacity>
@@ -82,7 +83,8 @@ export default function SettingsScreen() {
         <View style={styles.divider} />
 
         {/* About */}
-        <TouchableOpacity style={styles.item}>
+        <TouchableOpacity style={styles.item}
+        onPress={() => router.push("/(auth)/ContactUs")}>
           <Ionicons name="information-circle-outline" size={22} color="#1F305E" />
           <Text style={styles.itemText}>About Spenzia</Text>
         </TouchableOpacity>

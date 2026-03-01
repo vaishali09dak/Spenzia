@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
@@ -26,7 +25,6 @@ type Category = {
   name: string;
   color: string;
 };
-
 
 interface ExtractedData {
   amount: number;
@@ -72,6 +70,10 @@ const ExpenseFabModal: React.FC<Props> = ({ visible, onClose }) => {
 const [rawCSV, setRawCSV] = useState('');
 const [parsedTransactions, setParsedTransactions] = useState<ImportedTransaction[]>([]);
 const [importLoading, setImportLoading] = useState(false);
+const [monthlyBudget, setMonthlyBudget] = useState(50000); // example budget
+const [spentAmount, setSpentAmount] = useState(0);
+
+const remainingBudget = monthlyBudget - spentAmount;
 
   const amountRef = useRef('');
   const scrollRef = useRef<ScrollView>(null);
@@ -425,29 +427,44 @@ const saveAllTransactions = async () => {
   }
 };
 
- 
+ const isWithinBudget = (amount: number): boolean => {
+  return amount <= remainingBudget;
+};
+
 
   const submitTransaction = async () => {
-    if (!amountRef.current || !selectedCategory) {
-      Alert.alert('Error', 'Please fill amount and select category');
-      return;
-    }
+  if (!amountRef.current || !selectedCategory) {
+    Alert.alert('Error', 'Please fill amount and select category');
+    return;
+  }
 
-    const user = auth.currentUser;
-    if (!user) return;
+  const amountNum = Number(amountRef.current);
 
-    await addDoc(collection(db1, 'users', user.uid, 'transactions'), {
-      type: transactionType,
-      amount: Number(amountRef.current),
-      category: selectedCategory,
-      note,
-      date: transactionDate,
-      counterparty,
-      createdAt: serverTimestamp(),
-    });
+  if (!isWithinBudget(amountNum)) {
+    Alert.alert(
+      'Budget Exceeded',
+      `You only have ₹${remainingBudget.toLocaleString()} remaining. Transaction cannot exceed this amount.`
+    );
+    return;
+  }
 
-    closeModal();
-  };
+  const user = auth.currentUser;
+  if (!user) return;
+
+  await addDoc(collection(db1, 'users', user.uid, 'transactions'), {
+    type: transactionType,
+    amount: amountNum,
+    category: selectedCategory,
+    note,
+    date: transactionDate,
+    counterparty,
+    createdAt: serverTimestamp(),
+  });
+
+  // update spent amount
+  closeModal();
+};
+
 
   const getCategoryColor = (categoryName: string): string => {
     const cat = categories.find((c) => c.name.toLowerCase() === categoryName.toLowerCase());

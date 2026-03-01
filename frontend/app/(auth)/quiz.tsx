@@ -1,100 +1,72 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
-import { router } from "expo-router";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  ScrollView,
+} from 'react-native';
+import { router } from 'expo-router';
+
 const questions = [
   {
-    question: 'When you receive your salary, what do you do first?',
+    question: 'Why are you using this app?',
     options: [
-      { text: 'Save or invest most of it', score: 3 },
-      { text: 'Plan expenses and then spend', score: 2 },
-      { text: 'Spend freely and enjoy', score: 1 },
+      { text: 'To save more money', score: 3 },
+      { text: 'To track my expenses', score: 2 },
+      { text: 'Just to explore and try it out', score: 1 },
     ],
   },
   {
     question: 'Which category do you spend the most on?',
     options: [
-      { text: 'Essentials (Food, Bills, EMI)', score: 3 },
-      { text: 'Education / Health', score: 2 },
-      { text: 'Shopping / Entertainment', score: 1 },
-    ],
-  },
-  {
-    question: 'Do you track your expenses regularly?',
-    options: [
-      { text: 'Yes, every day', score: 3 },
-      { text: 'Sometimes', score: 2 },
-      { text: 'Rarely or never', score: 1 },
-    ],
-  },
-  {
-    question: 'What happens if you exceed your monthly budget?',
-    options: [
-      { text: 'I adjust next month and save more', score: 3 },
-      { text: 'I try to balance slowly', score: 2 },
-      { text: 'I don’t worry much', score: 1 },
+      { text: 'Essentials (Food, Rent, Bills)', score: 3 },
+      { text: 'Shopping & Lifestyle', score: 2 },
+      { text: 'Entertainment & Travel', score: 1 },
     ],
   },
 ];
 
 export default function SpendingQuizScreen() {
   const [current, setCurrent] = useState(0);
-  const [score, setScore] = useState(0);
-  const [finished, setFinished] = useState(false);
 
-  const handleAnswer = (value: number) => {
-    const newScore = score + value;
-    setScore(newScore);
-
-    if (current + 1 < questions.length) {
-      setCurrent(current + 1);
-    } else {
-      setFinished(true);
+  const handleAnswer = () => {
+    // If first question → go to second
+    if (current === 0) {
+      setCurrent(1);
     }
-  };
-
-  const getPersonality = () => {
-    if (score >= 10) return 'Smart Saver 🧠💰';
-    if (score >= 7) return 'Balanced Planner ⚖️';
-    return 'Free Spender 🎉';
+    // If second question → navigate to another page
+    else {
+      router.replace('/quiz-category'); 
+      // 👆 CHANGE THIS to your actual file route
+    }
   };
 
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Spending Personality Quiz</Text>
+        <Text style={styles.headerTitle}>Quick Setup</Text>
       </View>
 
-      {!finished ? (
-        <View style={styles.card}>
-          <Text style={styles.question}>{questions[current].question}</Text>
-          {questions[current].options.map((opt, index) => (
-            <TouchableOpacity
-              key={index}
-              style={styles.option}
-              onPress={() => handleAnswer(opt.score)}
-            >
-              <Text style={styles.optionText}>{opt.text}</Text>
-            </TouchableOpacity>
-          ))}
-          <Text style={styles.progress}>Question {current + 1} of {questions.length}</Text>
-        </View>
-      ) : (
-        <View style={styles.card}>
-          <Text style={styles.resultTitle}>Your Spending Personality</Text>
-          <Text style={styles.result}>{getPersonality()}</Text>
-          <Text style={styles.resultDesc}>
-            This result is based on your spending habits. You can improve your
-            financial health by tracking expenses and following a budget.
-          </Text>
+      <View style={styles.card}>
+        <Text style={styles.question}>
+          {questions[current].question}
+        </Text>
 
+        {questions[current].options.map((opt, index) => (
           <TouchableOpacity
-            style={styles.primaryBtn}
-            onPress={() => router.replace("/(tabs)")}
+            key={index}
+            style={styles.option}
+            onPress={handleAnswer}
           >
-            <Text style={styles.primaryBtnText}>Go to Dashboard</Text>
+            <Text style={styles.optionText}>{opt.text}</Text>
           </TouchableOpacity>
-        </View>
-      )}
+        ))}
+
+        <Text style={styles.progress}>
+          Question {current + 1} of {questions.length}
+        </Text>
+      </View>
     </ScrollView>
   );
 }
@@ -106,7 +78,8 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: '#243B6B',
-    padding: 24,
+    paddingHorizontal: 24,
+  paddingVertical: 50,
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
   },
@@ -144,34 +117,5 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#888',
     textAlign: 'right',
-  },
-  resultTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    textAlign: 'center',
-    marginBottom: 12,
-  },
-  result: {
-    fontSize: 22,
-    fontWeight: '700',
-    textAlign: 'center',
-    color: '#243B6B',
-    marginBottom: 12,
-  },
-  resultDesc: {
-    fontSize: 14,
-    textAlign: 'center',
-    color: '#555',
-    marginBottom: 20,
-  },
-  primaryBtn: {
-    backgroundColor: '#243B6B',
-    paddingVertical: 14,
-    borderRadius: 16,
-  },
-  primaryBtnText: {
-    color: '#fff',
-    textAlign: 'center',
-    fontWeight: '600',
   },
 });

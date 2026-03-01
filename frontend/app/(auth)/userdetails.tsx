@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import BackgroundDecor from "../../components/BackgroundDecor";
-
+import { KeyboardAvoidingView, Platform } from 'react-native';
 import {
   View,
   Text,
@@ -26,47 +26,73 @@ export default function UserDetailsScreen() {
   const [budget, setBudget] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleContinue = async () => {
-    // 🔍 Simple validation
-    if (!name || !phone || !age || !income || !budget) {
-      Alert.alert("Missing details", "Please fill all fields");
-      return;
-    }
+ const handleContinue = async () => {
+  if (!name || !phone || !age || !income || !budget) {
+    Alert.alert("Missing details", "Please fill all fields");
+    return;
+  }
 
-    if (phone.length !== 10) {
-      Alert.alert("Invalid phone", "Phone number must be 10 digits");
-      return;
-    }
+  if (phone.length !== 10) {
+    Alert.alert("Invalid phone", "Phone number must be 10 digits");
+    return;
+  }
 
-    const user = auth.currentUser;
-    if (!user) {
-      Alert.alert("Error", "User not authenticated");
-      return;
-    }
+  const incomeNum = Number(income);
+const budgetNum = Number(budget);
 
-    try {
-      setLoading(true);
+if (isNaN(incomeNum) || isNaN(budgetNum)) {
+  Alert.alert("Invalid input", "Income and budget must be numbers");
+  return;
+}
 
-      await setDoc(doc(db1, "users", user.uid), {
-        fullName: name,
-        phone,
-        age: Number(age),
-        monthlyIncome: Number(income),
-        monthlyBudget: Number(budget),
-        createdAt: serverTimestamp(),
-      });
+if (budgetNum <= 0 || incomeNum <= 0) {
+  Alert.alert("Invalid values", "Income and budget must be greater than zero");
+  return;
+}
 
-      // 🚀 Go to home
-      router.replace("/quiz");
-    } catch (error: any) {
-      Alert.alert("Error", error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+if (budgetNum > incomeNum) {
+  Alert.alert(
+    "Invalid Budget",
+    "Monthly budget cannot exceed your monthly income"
+  );
+  return;
+}
+
+
+  const user = auth.currentUser;
+  if (!user) {
+    Alert.alert("Error", "User not authenticated");
+    return;
+  }
+
+  try {
+    setLoading(true);
+
+    await setDoc(doc(db1, "users", user.uid), {
+      fullName: name,
+      phone,
+      age: Number(age),
+      monthlyIncome: incomeNum,
+      monthlyBudget: budgetNum,
+      createdAt: serverTimestamp(),
+    });
+
+    router.replace("/quiz");
+  } catch (error: any) {
+    Alert.alert("Error", error.message);
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   return (
     <SafeAreaView style={styles.container}>
+      <KeyboardAvoidingView
+            style={{ flex: 1 }}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 20 : 0}
+          >
       <BackgroundDecor />
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Header */}
@@ -119,16 +145,35 @@ export default function UserDetailsScreen() {
             onChangeText={setIncome}
           />
 
-          <TextInput
-            style={styles.input}
-            placeholder="Monthly Budget (₹)"
-            keyboardType="numeric"
-            value={budget}
-            onChangeText={setBudget}
-          />
+         <TextInput
+  style={styles.input}
+  placeholder="Monthly Budget (₹)"
+  keyboardType="numeric"
+  value={budget}
+  onChangeText={(value) => {
+    const numericValue = Number(value);
+
+    if (!income) {
+      Alert.alert("Please enter monthly income first");
+      return;
+    }
+
+    if (numericValue > Number(income)) {
+      Alert.alert(
+        "Budget limit exceeded",
+        "Budget cannot be greater than income"
+      );
+      return;
+    }
+
+    setBudget(value);
+  }}
+/>
+
         </View>
 
         {/* CTA */}
+        
         <TouchableOpacity
           style={[styles.button, loading && { opacity: 0.7 }]}
           onPress={handleContinue}
@@ -142,7 +187,9 @@ export default function UserDetailsScreen() {
         <Text style={styles.footerText}>
           You can change this later from settings
         </Text>
+
       </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
